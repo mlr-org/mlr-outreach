@@ -1,0 +1,541 @@
+---
+title: "mlr3"
+subtitle: "Modern machine learning in R"
+author: "Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder"
+output:
+  xaringan::moon_reader:
+    css: ["default", "robot-fonts", "extra.css"]
+    extra_css:
+    lib_dir: libs
+    self_contained: false
+    seal: false
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+
+---
+```{r, include = FALSE}
+library(paradox)
+library(mlr3)
+library(mlr3learners)
+library(mlr3tuning)
+requireNamespace("fansi")
+# remotes::install_github("ropenscilabs/icon")
+requireNamespace("icon")
+options(
+    crayon.enabled = TRUE,
+    datatable.print.class = FALSE,
+    datatable.print.keys = FALSE
+)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+class: inverse
+
+.center[
+# mlr3
+
+## _Modern machine learning in R_
+]
+
+.center[
+### Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder
+]
+.center[
+```{r echo = FALSE, out.height = 150}
+knitr::include_graphics(c("https://www.statistik.tu-dortmund.de/fileadmin/_processed_/8/b/csm_lang_0553e84b11.jpg", "https://www.compstat.statistik.uni-muenchen.de/images/bernd.jpg", "https://www.statistik.tu-dortmund.de/fileadmin/_processed_/0/7/csm_jakob_richter_37967a7cae.jpg", "https://lh5.googleusercontent.com/-J_qwCXEdtmA/AAAAAAAAAAI/AAAAAAAAAis/LLPrAyjEjD0/photo.jpg", "https://avatars0.githubusercontent.com/u/15801081?s=400&v=4"))
+```
+]
+
+.center.font150[
+[**bit.ly/XXXXXXX**](https://bit.ly/XXXXXXX)
+]
+---
+
+## What is machine learning?
+
+* Supervised 
+  * **Classification**
+    * Binary
+    * Multiclass
+  * **Regression**
+  * Survival (Time To Event)
+* Unsupervised
+  * Clustering
+
+---
+
+## What is a machine learning pipeline?
+
+.[~/gits/rcourses/chapters/ml/ml_intro/figure/ml-workflowfigure/ml-workflow](ml workflow)
+
+## Why are pipelines necessary?
+
+* Nested Crossvalidation!
+
+
+---
+
+## Machine Learning in R
+
+The **good** news:
+- CRAN serves hundreds of packages for machine learning
+- Many packages for single specific ML-methods
+  - `randomForest`, `ranger`
+  - `e1070::svm`
+  - `kknn`
+  - `xgboost`
+  - ...
+- Often compliant to the unwritten interface definition:
+```{r, eval=FALSE}
+model = fit(target ~ ., data = train.data, ...)
+predictions = predict(model, newdata = test.data, ...)
+```
+
+The **bad** news:
+- Some packages' API is "just different"
+- Functionality is always package or model-dependent, even though the procedure might be general
+- Capabilities often not clearly documented
+  - "Can this method handle missing/categorical values?"
+- ML workflow not standardized in R
+  - Cross Validation
+  - Hyperparameter Tuning
+  - Self implementations are error prone
+
+---
+
+## Motivation: (old) mlr
+
+- Unified interface for the basic building blocks: **tasks**, **learners**,
+  **hyperparameters**.
+
+.[~/gits/chapters/ml/ml_mlr/figure/ml_abstraction-crop.png](ml abstraction)
+
+- Simplifying repetitive tasks:
+  - cross-validation
+  - hyperparameter tuning
+  - comparision of different methods
+  - parallelization  
+
+- Project home page: https://github.com/mlr-org/mlr
+- 8-10 main developers
+  - + even more contributors
+  - + 5 GSOC projects since 2015
+- About 30K lines of code, 8K lines of unit tests
+
+---
+
+## What (old) mlr became
+
+Meta framework for everything machine learning (visualization, tuning, feature selection, preprocessing, bagging, ensembles, ...)
+
+* Monolithic package
+* Interfaces > 150 learners  
+  `r icon::fa("arrow-right")` Dependencies (direct / recursive): 119 / 1436  
+  `r icon::fa("arrow-right")` Unit tests take > 2h  
+  `r icon::fa("arrow-right")` Package developers changed their API and (unknowingly) broke mlr  
+* High barrier for new contributors
+
+* S3 reaches its limitations in larger software projects
+* Many specialized hard to find functions `getBMRAggrPerformances()`
+
+#### Further Design Issues
+
+* Only works on in-memory data
+* No nested parallelization
+
+---
+class: inverse, center, middle
+
+# mlr3
+
+---
+## mlr3
+
+* Overcome limitations of S3 with the help of **R6**
+  * Truly object-oriented (OO): data and methods together
+  * Inheritance
+  * Reference semantics
+  
+* Embrace **data.table**, both for arguments and for internal data structures
+  * Fast operations for tabular data
+  * Better support for list columns to arrange complex objects in a tabular structure
+  * Reference semantics
+  
+* Be **light on dependencies**. Direct and recursive dependencies:
+  * `R6`, `data.table`, `Metrics`, `lgr`
+  * Some self-maintained packages (`backports`, `checkmate`, ...)
+
+## consequences
+* steeper learning curve to learn mlr3
+* multiple packages for different functionality
+  * mlr3learners
+  * mlr3pipelines
+  * mlr3tuning
+  * mlr3filters
+  * ...
+* easier extendable
+  * inherit classes and overwrite functionality
+
+
+---
+
+## Example
+
+```{r, include = FALSE}
+library(mlr3)
+set.seed(1)
+```
+
+```{r}
+# create learning task
+task_iris = TaskClassif$new(id = "iris", backend = iris, target = "Species")
+
+# load learner
+learner = mlr_learners$get("classif.rpart")
+
+# set hyperparameter
+learner$param_set$values = list(cp = 0.01)
+
+# train/test split
+train_set = sample(task_iris$nrow, 0.8 * task_iris$nrow)
+test_set = setdiff(seq_len(task_iris$nrow), train_set)
+
+# train the model
+learner$train(task_iris, row_ids = train_set)
+
+# predict data
+prediction = learner$predict(task_iris, row_ids = test_set)
+
+# calculate performance
+prediction$confusion
+measure = mlr_measures$get("classif.acc")
+prediction$score(measure)
+```
+
+### Resample
+
+```{r}
+# automatic resampling
+resampling = mlr_resamplings$get("cv", param_vals = list(folds = 3L))
+rr = resample(task_iris, learner, resampling)
+rr$performance(measure)
+rr$aggregate()
+```
+---
+
+class: inverse, center, middle
+
+# Building Blocks
+
+---
+
+## Building Blocks
+```{r, echo = FALSE}
+knitr::include_graphics("ml_abstraction.png", dpi = 50)
+```
+
+---
+
+## Tasks
+
+.code100[
+`r icon::fa("arrow-right")` Create your own task
+```{r}
+TaskClassif$new("iris", iris, target = "Species")
+```
+    
+`r icon::fa("arrow-right")` Retrieve a predefined task from the task dictionary
+
+```{r}
+mlr_tasks
+task = mlr_tasks$get("iris")
+```
+  ]
+---
+## Learner
+
+`r icon::fa("arrow-right")` Retrieve a predefined learner from the learner dictionary
+
+.code100[
+ ```{r}
+ mlr_learners
+```
+]
+---
+
+## Learner
+
+`r icon::fa("arrow-right")` Retrieve a predefined learner from the learner dictionary
+
+.code100[
+ ```{r}
+ learner = mlr_learners$get("classif.rpart")
+ print(learner)
+```
+]
+---
+## Learner
+
+`r icon::fa("arrow-right")` Querying and setting hyperparameters
+.code100[
+```{r}
+# query
+learner$param_set
+# set
+learner$param_set$values = list(xval = 0, cp = 0.1)
+```
+    ]
+    
+---
+
+## Learner
+
+`r icon::fa("arrow-right")` Training
+.code100[
+```{r}
+task = mlr_tasks$get("iris")
+learner$train(task, row_ids = 1:120)
+```
+]
+NB: This changes the learner in-place, model is now stored inside the learner.
+
+---
+## Learner
+
+`r icon::fa("arrow-right")` Accessing the learner model
+.code90[
+```{r}
+learner$model
+```
+]
+
+`r icon::fa("arrow-right")` Variable importance
+.code100[
+```{r}
+learner$importance()
+```
+]
+
+---
+## Predictions
+
+`r icon::fa("arrow-right")` Generate predictions
+.code100[
+```{r}
+p = learner$predict(task, row_ids = 121:150)
+head(as.data.table(p), 3)
+```
+]
+
+`r icon::fa("arrow-right")` Confusion matrix
+.code100[
+```{r}
+p$confusion
+```
+]
+
+---
+
+## Performance Assessment
+`r icon::fa("arrow-right")` Retrieve a predefined measure from the measure dictionary
+.code100[
+```{r}
+measure = mlr_measures$get("classif.acc")
+measure
+```
+]
+
+`r icon::fa("arrow-right")` Calculate performance
+.code100[
+```{r}
+p$score(c("classif.acc", "time_train"))
+```
+]
+
+---
+class: inverse, center, middle
+
+# Rinse and Repeat
+
+---
+## Resample
+
+.code100[
+`r icon::fa("arrow-right")` Resampling Object
+
+```{r}
+cv3 = mlr_resamplings$get("cv", param_vals = list(folds = 3))
+```
+
+Splits into train/test are efficiently stored and can be accessed with `$train_set(i)` and `$test_set(i)`.
+
+`r icon::fa("arrow-right")` Resample a regression tree on the Boston housing data using a 3-fold CV
+
+```{r}
+# string -> object conversion via dictionary
+rr = resample("boston_housing", "regr.rpart", cv3)
+```
+
+`r icon::fa("arrow-right")` Aggregated performance
+
+```{r}
+rr$aggregate("regr.mse")
+```
+]
+
+---
+
+## Benchmarking
+
+.code90[
+`r icon::fa("arrow-right")` Exhaustive grid design
+```{r}
+grid = expand_grid(
+    tasks = "iris",
+    learners = c("classif.featureless", "classif.rpart"),
+    resamplings = "cv3"
+)
+bmr = benchmark(grid, ctrl = list(store_models = TRUE))
+aggr = bmr$aggregate("classif.acc")
+aggr[, 2:6]
+```
+]
+
+---
+
+## Benchmarking
+
+.code100[
+`r icon::fa("arrow-right")` Retrieving objects
+
+```{r}
+aggr$resample_result[[2]]$prediction$confusion
+```
+]
+
+---
+
+## Tuning
+
+* Algorithms: _Grid Search_, _Random Search_, _Simulated Annealing_
+* In process: _Bayesian Optimization_, _iterated F-racing_, _EAs_
+* Budget via class `Terminator`: iterations, performance, runtime, real time
+* Nested resampling via class `AutoTuner`
+```{r, eval = FALSE}
+ps = ParamSet$new(list(
+  ParamInt$new("num.trees", lower = 50, upper = 500),
+  ParamInt$new("mtry", lower = 1, upper = 5)
+))
+
+at = AutoTuner$new(
+  learner = "classif.ranger",
+  resampling = "cv3", # inner resampling
+  measures = "classif.acc",
+  param_set = ps,
+  terminator = TerminatorEvaluations$new(10),
+  tuner = TunerRandomSearch
+)
+
+resample(
+  task = "spam",
+  learner = at,
+  resampling = "holdout" # outer resampling
+)
+```
+
+
+---
+
+class: inverse, center, middle
+
+# Behind the Curtain
+
+---
+
+## Internal Data Structure
+
+All result objects (`resample()`, `benchmark()`, tuning, ...) share the same structure:
+.code90[
+```{r}
+as.data.table(rr)
+```
+]
+
+#### Combining R6 and data.table
+* Not the objects are stored, but pointers to them
+
+* Inexpensive to work on:
+  * `rbind()`: copying R6 objects &wedgeq; copying pointers
+  * `cbind()`: `data.table()` over-allocates columns, no copies
+  * `[i, ]`: lookup row (possibly hashed), create a list of pointers
+  * `[, j]`: direct access to list element
+
+
+---
+
+## Control of Execution
+
+.code100[
+`r icon::fa("arrow-right")` Parallelization
+```{r, eval = FALSE}
+future::plan("multicore")
+benchmark(grid)
+```
+* runs each resampling iteration as a job<br/>
+* also allows nested resampling (although not needed here)
+
+
+`r icon::fa("arrow-right")`  Encapsulation
+
+```{r, eval = FALSE}
+ctrl = mlr_control(encapsulate_train = "callr")
+benchmark(grid, ctrl = ctrl)
+```
+* Spawns a separate R process to train the learner
+* Learner may segfault without tearing down the master session
+* Logs are captured
+* Possibility to have a fallback learner to create predictions
+
+]
+---
+
+## Out-of-memory Data
+
+* Task stores data in a `DataBackend`:
+    * `DataBackendDataTable`: Default backend for dense data (in-memory)
+    * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
+    * `DataBackendDplyr`: Backend for many DBMS (out-of-memory).
+    * `DataBackendCbind`: Combine backends in a `cbind()` fashion (virtual)
+    * `DataBackendRbind`: Combine backends in a `rbind()` fashion (virtual)
+    
+* Backends are immutable
+    * Filtering rows or selecting columns just modifies the "view" on the data
+    * Multiple tasks can share the same backend
+    
+* Example: Interface a read-only MariaDB with `DataBackendDplyr`, add generated features via `DataBackendDataTable`
+
+---
+
+## Current state
+
+* Preview release uploaded to CRAN
+
+* Started extension packages:
+  * `mlr3db` for additional backends
+  * `mlr3pipelines` to create workflows
+  * `mlr3learners` for recommended learners
+  * `mlr3tuning` for tuning
+  * `mlr3survival` for survival analysis
+  * `mlr3viz` for visualizations
+* Planned extensions:
+  * forecasting
+  * spatio-temporal analysis
+  * deep learning with keras
+  * connector to Apache Spark
+
+<div align="center" style="font-size: 140%">
+Want to contribute?<br/>
+<a href="https://mlr3.mlr-org.com">mlr3.mlr-org.com</a>
+</div>
