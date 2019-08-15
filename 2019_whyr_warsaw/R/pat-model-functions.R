@@ -1,8 +1,11 @@
 #' @title Combine mlr3 benchmark results
 combine_benchmarks = function(...) {
-  args = list(...)
-  lapply(args[-1], args[[1]]$combine)
-  args[[1]]
+  benchmarks = list(...)
+  final_benchmark = benchmarks[[1]]$clone(deep = TRUE)
+  for (i in tail(seq_along(benchmarks), -1)) {
+    final_benchmark$combine(benchmarks[[i]])
+  }
+  return(final_benchmark)
 }
 
 #' @title Create a single mlr3 benchmark run including tuning
