@@ -218,7 +218,8 @@ prediction$score(measure)
 
 ```{r}
 # automatic resampling
-resampling = mlr_resamplings$get("cv", param_vals = list(folds = 3L))
+resampling = mlr_resamplings$get("cv")
+resampling$param_set$values$folds = 3
 rr = resample(task_iris, learner, resampling)
 rr$performance(measure)
 rr$aggregate()
@@ -350,7 +351,7 @@ measure
 `r icon::fa("arrow-right")` Calculate performance
 .code100[
 ```{r}
-p$score(c("classif.acc", "time_train"))
+p$score(list(msr("classif.acc"), msr("time_train")))
 ```
 ]
 
@@ -366,7 +367,7 @@ class: inverse, center, middle
 `r icon::fa("arrow-right")` Resampling Object
 
 ```{r}
-cv3 = mlr_resamplings$get("cv", param_vals = list(folds = 3))
+cv3 = rsmp("cv", folds = 3)
 ```
 
 Splits into train/test are efficiently stored and can be accessed with `$train_set(i)` and `$test_set(i)`.
@@ -375,7 +376,7 @@ Splits into train/test are efficiently stored and can be accessed with `$train_s
 
 ```{r}
 # string -> object conversion via dictionary
-rr = resample("boston_housing", "regr.rpart", cv3)
+rr = resample(tsk("boston_housing"), lrn("regr.rpart"), cv3)
 ```
 
 `r icon::fa("arrow-right")` Aggregated performance
@@ -392,13 +393,14 @@ rr$aggregate("regr.mse")
 .code90[
 `r icon::fa("arrow-right")` Exhaustive grid design
 ```{r}
-grid = expand_grid(
-    tasks = "iris",
-    learners = c("classif.featureless", "classif.rpart"),
-    resamplings = "cv3"
+library(data.table)
+design = benchmark_grid(
+  tasks = tsk("iris"),
+  learners = list(lrn("classif.featureless"), lrn("classif.rpart")),
+  resamplings = rsmp("holdout")
 )
-bmr = benchmark(grid, ctrl = list(store_models = TRUE))
-aggr = bmr$aggregate("classif.acc")
+bmr = benchmark(design, store_models = TRUE)
+aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 2:6]
 ```
 ]
@@ -411,7 +413,10 @@ aggr[, 2:6]
 `r icon::fa("arrow-right")` Retrieving objects
 
 ```{r}
-aggr$resample_result[[2]]$prediction$confusion
+#featureless
+bmr$resample_result(1)$prediction()$confusion
+#rpart
+bmr$resample_result(2)$prediction()$confusion
 ```
 ]
 
@@ -430,18 +435,18 @@ ps = ParamSet$new(list(
 ))
 
 at = AutoTuner$new(
-  learner = "classif.ranger",
-  resampling = "cv3", # inner resampling
-  measures = "classif.acc",
-  param_set = ps,
-  terminator = TerminatorEvaluations$new(10),
-  tuner = TunerRandomSearch
+  learner = lrn("classif.ranger"),
+  resampling = rsmp("cv", folds = 3), # inner resampling
+  measures = msr("classif.acc"),
+  tune_ps = ps,
+  terminator = term("evals", 10),
+  tuner = tnr("random_search")
 )
 
 resample(
-  task = "spam",
+  task = tsk("spam")
   learner = at,
-  resampling = "holdout" # outer resampling
+  resampling = rsmp("holdout") # outer resampling
 )
 ```
 
