@@ -4,11 +4,7 @@ subtitle: "Modern machine learning in R"
 author: "Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder"
 output:
   xaringan::moon_reader:
-    css: ["default", "robot-fonts", "extra.css"]
-    extra_css:
-    lib_dir: libs
-    self_contained: false
-    seal: false
+    css: ["metropolis", "robot-fonts", "extra.css"]
     nature:
       highlightStyle: github
       highlightLines: true
@@ -18,8 +14,6 @@ output:
 ```{r, include = FALSE}
 library(paradox)
 library(mlr3)
-library(mlr3learners)
-library(mlr3tuning)
 requireNamespace("fansi")
 # remotes::install_github("ropenscilabs/icon")
 requireNamespace("icon")
@@ -31,53 +25,33 @@ options(
 lgr::get_logger("mlr3")$set_threshold("warn")
 ```
 
-class: inverse
+# What is machine learning?
 
-.center[
-# mlr3
+Supervised 
+* **Classification**
+  * Binary
+  * Multiclass
+* **Regression**
+* Survival (Time To Event)
 
-## _Modern machine learning in R_
-]
+Unsupervised
+* Clustering
 
-.center[
-### Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder
-]
-.center[
-```{r echo = FALSE, out.height = 150}
-knitr::include_graphics(c("https://www.statistik.tu-dortmund.de/fileadmin/_processed_/8/b/csm_lang_0553e84b11.jpg", "https://www.compstat.statistik.uni-muenchen.de/images/bernd.jpg", "https://www.statistik.tu-dortmund.de/fileadmin/_processed_/0/7/csm_jakob_richter_37967a7cae.jpg", "https://lh5.googleusercontent.com/-J_qwCXEdtmA/AAAAAAAAAAI/AAAAAAAAAis/LLPrAyjEjD0/photo.jpg", "https://avatars0.githubusercontent.com/u/15801081?s=400&v=4"))
+---
+
+# What is a machine learning pipeline?
+
+```{r, echo = FALSE}
+knitr::include_graphics("assets/ml-workflow.png", dpi = 50)
 ```
-]
 
-.center.font150[
-[**bit.ly/XXXXXXX**](https://bit.ly/XXXXXXX)
-]
----
-
-## What is machine learning?
-
-* Supervised 
-  * **Classification**
-    * Binary
-    * Multiclass
-  * **Regression**
-  * Survival (Time To Event)
-* Unsupervised
-  * Clustering
-
----
-
-## What is a machine learning pipeline?
-
-.[~/gits/rcourses/chapters/ml/ml_intro/figure/ml-workflowfigure/ml-workflow](ml workflow)
-
-## Why are pipelines necessary?
-
-* Nested Crossvalidation!
+`r icon::fa("question-circle")` Why are pipelines necessary?  
+`r icon::fa("exclamation-circle")` Gives reproducible process that can be validated (through nested crossvalidation).
 
 
 ---
 
-## Machine Learning in R
+# Machine Learning in R
 
 The **good** news:
 - CRAN serves hundreds of packages for machine learning
@@ -93,6 +67,10 @@ model = fit(target ~ ., data = train.data, ...)
 predictions = predict(model, newdata = test.data, ...)
 ```
 
+---
+
+# Machine Learning in R
+
 The **bad** news:
 - Some packages' API is "just different"
 - Functionality is always package or model-dependent, even though the procedure might be general
@@ -105,12 +83,10 @@ The **bad** news:
 
 ---
 
-## Motivation: (old) mlr
+# Motivation: (old) mlr
 
 - Unified interface for the basic building blocks: **tasks**, **learners**,
   **hyperparameters**.
-
-.[~/gits/chapters/ml/ml_mlr/figure/ml_abstraction-crop.png](ml abstraction)
 
 - Simplifying repetitive tasks:
   - cross-validation
@@ -126,7 +102,7 @@ The **bad** news:
 
 ---
 
-## What (old) mlr became
+# What (old) mlr became
 
 Meta framework for everything machine learning (visualization, tuning, feature selection, preprocessing, bagging, ensembles, ...)
 
@@ -136,7 +112,6 @@ Meta framework for everything machine learning (visualization, tuning, feature s
   `r icon::fa("arrow-right")` Unit tests take > 2h  
   `r icon::fa("arrow-right")` Package developers changed their API and (unknowingly) broke mlr  
 * High barrier for new contributors
-
 * S3 reaches its limitations in larger software projects
 * Many specialized hard to find functions `getBMRAggrPerformances()`
 
@@ -144,14 +119,8 @@ Meta framework for everything machine learning (visualization, tuning, feature s
 
 * Only works on in-memory data
 * No nested parallelization
-
 ---
-class: inverse, center, middle
-
 # mlr3
-
----
-## mlr3
 
 * Overcome limitations of S3 with the help of **R6**
   * Truly object-oriented (OO): data and methods together
@@ -167,81 +136,38 @@ class: inverse, center, middle
   * `R6`, `data.table`, `Metrics`, `lgr`
   * Some self-maintained packages (`backports`, `checkmate`, ...)
 
-## consequences
+---
+# consequences
 * steeper learning curve to learn mlr3
 * multiple packages for different functionality
   * mlr3learners
   * mlr3pipelines
   * mlr3tuning
   * mlr3filters
+  * mlr3viz
   * ...
 * easier extendable
   * inherit classes and overwrite functionality
 
 
+
 ---
-
-## Example
-
-```{r, include = FALSE}
-library(mlr3)
-set.seed(1)
-```
-
-```{r}
-# create learning task
-task_iris = TaskClassif$new(id = "iris", backend = iris, target = "Species")
-
-# load learner
-learner = mlr_learners$get("classif.rpart")
-
-# set hyperparameter
-learner$param_set$values = list(cp = 0.01)
-
-# train/test split
-train_set = sample(task_iris$nrow, 0.8 * task_iris$nrow)
-test_set = setdiff(seq_len(task_iris$nrow), train_set)
-
-# train the model
-learner$train(task_iris, row_ids = train_set)
-
-# predict data
-prediction = learner$predict(task_iris, row_ids = test_set)
-
-# calculate performance
-prediction$confusion
-measure = mlr_measures$get("classif.acc")
-prediction$score(measure)
-```
-
-### Resample
-
-```{r}
-# automatic resampling
-resampling = mlr_resamplings$get("cv")
-resampling$param_set$values$folds = 3
-rr = resample(task_iris, learner, resampling)
-rr$performance(measure)
-rr$aggregate()
-```
----
-
 class: inverse, center, middle
 
-# Building Blocks
+# mlr3
 
 ---
 
-## Building Blocks
+# Building Blocks
 ```{r, echo = FALSE}
-knitr::include_graphics("ml_abstraction.png", dpi = 50)
+knitr::include_graphics("assets/ml_abstraction_colors.svg.png", dpi = 50)
 ```
 
 ---
 
-## Tasks
+# Tasks
 
-.code100[
+
 `r icon::fa("arrow-right")` Create your own task
 ```{r}
 TaskClassif$new("iris", iris, target = "Species")
@@ -253,107 +179,166 @@ TaskClassif$new("iris", iris, target = "Species")
 mlr_tasks
 task = mlr_tasks$get("iris")
 ```
-  ]
+
 ---
-## Learner
+# Learner
 
 `r icon::fa("arrow-right")` Retrieve a predefined learner from the learner dictionary
 
-.code100[
- ```{r}
- mlr_learners
+```{r}
+mlr_learners
+learner = mlr_learners$get("classif.rpart")
+learner
 ```
-]
+
+`r icon::fa("info-circle")` More learners are available after loading `mlr3learners`.
+
 ---
-
-## Learner
-
-`r icon::fa("arrow-right")` Retrieve a predefined learner from the learner dictionary
-
-.code100[
- ```{r}
- learner = mlr_learners$get("classif.rpart")
- print(learner)
-```
-]
----
-## Learner
+# Learner
 
 `r icon::fa("arrow-right")` Querying and setting hyperparameters
-.code100[
+
 ```{r}
 # query
 learner$param_set
 # set
 learner$param_set$values = list(xval = 0, cp = 0.1)
 ```
-    ]
     
 ---
 
-## Learner
+# Learner
 
 `r icon::fa("arrow-right")` Training
-.code100[
 ```{r}
 task = mlr_tasks$get("iris")
-learner$train(task, row_ids = 1:120)
+learner$train(task, row_ids = seq(1, to = 150, by = 2))
 ```
-]
-NB: This changes the learner in-place, model is now stored inside the learner.
+`r icon::fa("info-circle")` This changes the learner in-place, model is now stored inside the learner.
 
 ---
-## Learner
+# Learner
 
 `r icon::fa("arrow-right")` Accessing the learner model
-.code90[
+.small[
 ```{r}
 learner$model
 ```
 ]
 
+.small[
 `r icon::fa("arrow-right")` Variable importance
-.code100[
 ```{r}
 learner$importance()
 ```
 ]
 
 ---
-## Predictions
+# Prediction
 
 `r icon::fa("arrow-right")` Generate predictions
-.code100[
 ```{r}
-p = learner$predict(task, row_ids = 121:150)
+p = learner$predict(task, row_ids = seq(2, to = 150, by = 2))
 head(as.data.table(p), 3)
 ```
-]
+
 
 `r icon::fa("arrow-right")` Confusion matrix
-.code100[
 ```{r}
 p$confusion
 ```
-]
+
 
 ---
 
-## Performance Assessment
+# Measure
 `r icon::fa("arrow-right")` Retrieve a predefined measure from the measure dictionary
-.code100[
 ```{r}
 measure = mlr_measures$get("classif.acc")
 measure
 ```
-]
 
 `r icon::fa("arrow-right")` Calculate performance
-.code100[
 ```{r}
-p$score(list(msr("classif.acc"), msr("time_train")))
+p$score(measure)
+```
+
+
+---
+
+# Dictionaries
+
+Dictionaries store often used objects.
+
+|Dictionary|Helper|  |
+|:---------|:-----|--|
+|`mlr_learners`|`lrn()`|learners|
+|`mlr_measures`|`msr()`|measures (acc, auc, mse, ...)|
+|`mlr_resamplings`|`rsmp()`|resampling strategies (cv, holdout, bootstrap, ...)|
+|`mlr_tasks`|`tsk()`|Example tasks|
+|`mlr_task_generators`|`tgen()`|Syhnthetic task generators|
+
+`r icon::fa("info-circle")` Dictionaries can get populated by add-on packages (eg. `mlr3learners`).
+
+```{r}
+mlr_tasks
+task = mlr_tasks$get("spam")
+task = tsk("spam") #helper
+```
+
+---
+# Example
+
+```{r, include = FALSE}
+library(mlr3)
+set.seed(1)
+```
+
+
+```{r}
+# Create learning task
+task_iris = TaskClassif$new(id = "iris", backend = iris, target = "Species")
+
+# Load learner from dictionary
+learner = mlr_learners$get("classif.rpart")
+
+# Set learner hyperparameter
+learner$param_set$values$cp = 0.01
+
+# Create train/test split
+train_set = sample(task_iris$nrow, 0.8 * task_iris$nrow)
+test_set = setdiff(seq_len(task_iris$nrow), train_set)
+
+# Train the model
+learner$train(task_iris, row_ids = train_set)
+
+# Predict data
+prediction = learner$predict(task_iris, row_ids = test_set)
+```
+
+---
+# Example (cont.)
+.small[
+```{r}
+prediction
+# calculate performance
+prediction$confusion
+prediction$score(msr("classif.acc"))
+```
+
+### Resample
+
+```{r}
+# automatic resampling
+resampling = mlr_resamplings$get("cv")
+resampling$param_set$values$folds = 3
+rr = resample(task_iris, learner, resampling)
+rr$performance(msr("classif.acc"))
+rr$aggregate()
 ```
 ]
+
+
 
 ---
 class: inverse, center, middle
@@ -361,9 +346,9 @@ class: inverse, center, middle
 # Rinse and Repeat
 
 ---
-## Resample
+# Resample
 
-.code100[
+
 `r icon::fa("arrow-right")` Resampling Object
 
 ```{r}
@@ -384,13 +369,12 @@ rr = resample(tsk("boston_housing"), lrn("regr.rpart"), cv3)
 ```{r}
 rr$aggregate("regr.mse")
 ```
-]
+
 
 ---
 
-## Benchmarking
+# Benchmarking
 
-.code90[
 `r icon::fa("arrow-right")` Exhaustive grid design
 ```{r}
 library(data.table)
@@ -403,13 +387,12 @@ bmr = benchmark(design, store_models = TRUE)
 aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 2:6]
 ```
-]
 
 ---
 
-## Benchmarking
+# Benchmarking
 
-.code100[
+
 `r icon::fa("arrow-right")` Retrieving objects
 
 ```{r}
@@ -418,17 +401,19 @@ bmr$resample_result(1)$prediction()$confusion
 #rpart
 bmr$resample_result(2)$prediction()$confusion
 ```
-]
+
 
 ---
 
-## Tuning
+# Tuning
 
 * Algorithms: _Grid Search_, _Random Search_, _Simulated Annealing_
 * In process: _Bayesian Optimization_, _iterated F-racing_, _EAs_
 * Budget via class `Terminator`: iterations, performance, runtime, real time
 * Nested resampling via class `AutoTuner`
 ```{r, eval = FALSE}
+library(mlr3learners)
+library(mlr3tuning)
 ps = ParamSet$new(list(
   ParamInt$new("num.trees", lower = 50, upper = 500),
   ParamInt$new("mtry", lower = 1, upper = 5)
@@ -450,23 +435,31 @@ resample(
 )
 ```
 
+---
+
+class: inverse, center, middle
+
+# mlr3pipelines
+
+---
+
 
 ---
 
 class: inverse, center, middle
 
-# Behind the Curtain
+# Advanced Usage
 
 ---
 
-## Internal Data Structure
+# Internal Data Structure
 
 All result objects (`resample()`, `benchmark()`, tuning, ...) share the same structure:
-.code90[
+
 ```{r}
 as.data.table(rr)
 ```
-]
+
 
 #### Combining R6 and data.table
 * Not the objects are stored, but pointers to them
@@ -480,9 +473,9 @@ as.data.table(rr)
 
 ---
 
-## Control of Execution
+# Control of Execution
 
-.code100[
+
 `r icon::fa("arrow-right")` Parallelization
 ```{r, eval = FALSE}
 future::plan("multicore")
@@ -503,17 +496,17 @@ benchmark(grid, ctrl = ctrl)
 * Logs are captured
 * Possibility to have a fallback learner to create predictions
 
-]
+
 ---
 
-## Out-of-memory Data
+# Out-of-memory Data
 
 * Task stores data in a `DataBackend`:
     * `DataBackendDataTable`: Default backend for dense data (in-memory)
     * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
-    * `DataBackendDplyr`: Backend for many DBMS (out-of-memory).
-    * `DataBackendCbind`: Combine backends in a `cbind()` fashion (virtual)
-    * `DataBackendRbind`: Combine backends in a `rbind()` fashion (virtual)
+    * `mlr3db::DataBackendDplyr`: Backend for many DBMS (out-of-memory)
+    * `DataBackendCbind`: Combine backends thorugh `task$cbind(backend)` (virtual)
+    * `DataBackendRbind`: Combine backends thorugh `task$rbind(backend)` (virtual)
     
 * Backends are immutable
     * Filtering rows or selecting columns just modifies the "view" on the data
@@ -523,24 +516,12 @@ benchmark(grid, ctrl = ctrl)
 
 ---
 
-## Current state
+# Current state
 
-* Preview release uploaded to CRAN
+https://github.com/mlr-org/mlr3/wiki/CI-Status
+https://github.com/mlr-org/mlr3/wiki/Extension-Packages
 
-* Started extension packages:
-  * `mlr3db` for additional backends
-  * `mlr3pipelines` to create workflows
-  * `mlr3learners` for recommended learners
-  * `mlr3tuning` for tuning
-  * `mlr3survival` for survival analysis
-  * `mlr3viz` for visualizations
-* Planned extensions:
-  * forecasting
-  * spatio-temporal analysis
-  * deep learning with keras
-  * connector to Apache Spark
 
-<div align="center" style="font-size: 140%">
-Want to contribute?<br/>
-<a href="https://mlr3.mlr-org.com">mlr3.mlr-org.com</a>
-</div>
+Want to contribute?  
+[mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+
