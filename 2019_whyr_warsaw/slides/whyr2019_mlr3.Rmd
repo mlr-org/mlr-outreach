@@ -12,15 +12,28 @@ output:
 
 ---
 ```{r, include = FALSE}
+CHAR_WIDTH = 100
+FIG_WIDTH = 9
+FIG_HEIGHT = 4
 library(paradox)
 library(mlr3)
 requireNamespace("fansi")
-# remotes::install_github("ropenscilabs/icon")
-requireNamespace("icon")
+requireNamespace("icon") # remotes::install_github("ropenscilabs/icon")
 options(
     crayon.enabled = TRUE,
     datatable.print.class = FALSE,
-    datatable.print.keys = FALSE
+    datatable.print.keys = FALSE,
+    width = CHAR_WIDTH
+)
+knitr::opts_chunk$set(
+  comment = NA,
+  width = CHAR_WIDTH,
+  fig.height = FIG_HEIGHT,
+  fig.width = FIG_WIDTH,
+  fig.align = "center",
+  dev = 'svg',
+  out.width = "90%",
+  cache = FALSE #because it does not work wiht mlr3/R6
 )
 lgr::get_logger("mlr3")$set_threshold("warn")
 ```
@@ -41,7 +54,7 @@ Unsupervised
 
 # What is a machine learning pipeline?
 
-```{r, echo = FALSE}
+```{r fig_pipelines, echo = FALSE}
 knitr::include_graphics("assets/ml-workflow.png", dpi = 50)
 ```
 
@@ -159,7 +172,7 @@ class: inverse, center, middle
 ---
 
 # Building Blocks
-```{r, echo = FALSE}
+```{r fig_building_blocks, echo = FALSE}
 knitr::include_graphics("assets/ml_abstraction_colors.svg.png", dpi = 50)
 ```
 
@@ -187,11 +200,17 @@ task = mlr_tasks$get("iris")
 
 ```{r}
 mlr_learners
+```
+`r icon::fa("info-circle")` More learners are available after loading `mlr3learners`.
+
+.small[
+```{r}
 learner = mlr_learners$get("classif.rpart")
 learner
 ```
+]
 
-`r icon::fa("info-circle")` More learners are available after loading `mlr3learners`.
+
 
 ---
 # Learner
@@ -226,10 +245,11 @@ learner$model
 ```
 ]
 
+`r icon::fa("smile")` Unified interface, to acess *feature importance*, *selected features* etc. for all learners. 
 .small[
-`r icon::fa("arrow-right")` Variable importance
 ```{r}
 learner$importance()
+learner$selected_features()
 ```
 ]
 
@@ -253,16 +273,47 @@ p$confusion
 
 # Measure
 `r icon::fa("arrow-right")` Retrieve a predefined measure from the measure dictionary
-```{r}
-measure = mlr_measures$get("classif.acc")
-measure
+.small[
+```{r,include=FALSE}
+options(width = CHAR_WIDTH*1.2)
 ```
+```{r}
+mlr_measures
+(measure = mlr_measures$get("classif.acc"))
+```
+```{r, include=FALSE}
+options(width = CHAR_WIDTH)
+```
+
+]
 
 `r icon::fa("arrow-right")` Calculate performance
 ```{r}
 p$score(measure)
 ```
 
+---
+# Resample
+
+
+`r icon::fa("arrow-right")` Automate train/test splitting and predict with *resampling*.
+.small[
+```{r}
+mlr_resamplings
+resampling = mlr_resamplings$get("cv")
+resampling$param_set$values$folds = 3
+rr = resample(task, learner, resampling)
+rr$performance() 
+rr$aggregate()
+```
+]
+
+`r icon::fa("info-circle")` The default measure for classif tasks is the *classification error*.
+
+---
+# Recap: Builing Blocks
+```{r fig_building_blocks, echo = FALSE}
+```
 
 ---
 
@@ -272,11 +323,12 @@ Dictionaries store often used objects.
 
 |Dictionary|Helper|  |
 |:---------|:-----|--|
+|`mlr_tasks`|`tsk()`|Example tasks (iris, spam, ...)|
+|`mlr_task_generators`|`tgen()`|Syhnthetic task generators|
 |`mlr_learners`|`lrn()`|learners|
 |`mlr_measures`|`msr()`|measures (acc, auc, mse, ...)|
 |`mlr_resamplings`|`rsmp()`|resampling strategies (cv, holdout, bootstrap, ...)|
-|`mlr_tasks`|`tsk()`|Example tasks|
-|`mlr_task_generators`|`tgen()`|Syhnthetic task generators|
+
 
 `r icon::fa("info-circle")` Dictionaries can get populated by add-on packages (eg. `mlr3learners`).
 
@@ -287,7 +339,7 @@ task = tsk("spam") #helper
 ```
 
 ---
-# Example
+# Recap: Example Train/Test
 
 ```{r, include = FALSE}
 library(mlr3)
@@ -300,7 +352,7 @@ set.seed(1)
 task_iris = TaskClassif$new(id = "iris", backend = iris, target = "Species")
 
 # Load learner from dictionary
-learner = mlr_learners$get("classif.rpart")
+learner = lrn("classif.rpart")
 
 # Set learner hyperparameter
 learner$param_set$values$cp = 0.01
@@ -317,7 +369,8 @@ prediction = learner$predict(task_iris, row_ids = test_set)
 ```
 
 ---
-# Example (cont.)
+# Example Train/Test (cont.)
+
 .small[
 ```{r}
 prediction
@@ -325,28 +378,10 @@ prediction
 prediction$confusion
 prediction$score(msr("classif.acc"))
 ```
-
-### Resample
-
-```{r}
-# automatic resampling
-resampling = mlr_resamplings$get("cv")
-resampling$param_set$values$folds = 3
-rr = resample(task_iris, learner, resampling)
-rr$performance(msr("classif.acc"))
-rr$aggregate()
-```
 ]
 
-
-
 ---
-class: inverse, center, middle
-
-# Rinse and Repeat
-
----
-# Resample
+# Recap: Example Resample
 
 
 `r icon::fa("arrow-right")` Resampling Object
@@ -367,41 +402,69 @@ rr = resample(tsk("boston_housing"), lrn("regr.rpart"), cv3)
 `r icon::fa("arrow-right")` Aggregated performance
 
 ```{r}
-rr$aggregate("regr.mse")
+rr$aggregate(msr("regr.mse"))
 ```
 
+
+---
+class: inverse, center, middle
+
+# Benchmarking
 
 ---
 
 # Benchmarking
 
-`r icon::fa("arrow-right")` Exhaustive grid design
-```{r}
-library(data.table)
+`r icon::fa("info-circle")` `benchmark()` runs resample on multiple learners and multiple tasks
+
+`r icon::fa("arrow-right")` A sensible choice is usually the combination of all components in an exhaustive gird:
+```{r benchmark1_design}
 design = benchmark_grid(
-  tasks = tsk("iris"),
+  tasks = list(tsk("iris"), tsk("spam")),
   learners = list(lrn("classif.featureless"), lrn("classif.rpart")),
-  resamplings = rsmp("holdout")
+  resamplings = rsmp("cv")
 )
-bmr = benchmark(design, store_models = TRUE)
-aggr = bmr$aggregate(msr("classif.acc"))
-aggr[, 2:6]
+design
 ```
+---
+
+# Benchmarking (cont.)
+
+`r icon::fa("arrow-right")` Execute `benchmark()` on the defined design
+.small[
+```{r benchmark1}
+bmr = benchmark(design, store_models = TRUE)
+bmr
+```
+
+`r icon::fa("arrow-right")` Calculate aggregated performance measure
+```{r}
+aggr = bmr$aggregate(msr("classif.acc"))
+aggr[, 3:7]
+```
+]
 
 ---
 
-# Benchmarking
+# Benchmarking (cont.)
 
 
-`r icon::fa("arrow-right")` Retrieving objects
+`r icon::fa("arrow-right")` Retrieve objects from the `BenchmarkResult`:
 
 ```{r}
-#featureless
-bmr$resample_result(1)$prediction()$confusion
-#rpart
-bmr$resample_result(2)$prediction()$confusion
+# ResampleResult from 2nd configuration in the design (rpart on iris)
+bmr$resample_result(2) -> rr
+# confusion matrix
+rr$prediction()$confusion
+# Average feature importance
+library(magrittr)
+sapply(rr$data$learner, function(x) x$importance()) %>% apply(1, mean)
 ```
 
+---
+class: inverse, center, middle
+
+# Tuning
 
 ---
 
@@ -411,29 +474,56 @@ bmr$resample_result(2)$prediction()$confusion
 * In process: _Bayesian Optimization_, _iterated F-racing_, _EAs_
 * Budget via class `Terminator`: iterations, performance, runtime, real time
 * Nested resampling via class `AutoTuner`
-```{r, eval = FALSE}
-library(mlr3learners)
-library(mlr3tuning)
+
+.small[
+```{r at_resample}
+library(mlr3learners); library(mlr3tuning)
 ps = ParamSet$new(list(
-  ParamInt$new("num.trees", lower = 50, upper = 500),
-  ParamInt$new("mtry", lower = 1, upper = 5)
+  ParamInt$new("min.node.size", lower = 1, upper = 10),
+  ParamInt$new("mtry", lower = 10, upper = 50)
 ))
 
 at = AutoTuner$new(
-  learner = lrn("classif.ranger"),
+  learner = lrn("classif.ranger"), # Random Forest
   resampling = rsmp("cv", folds = 3), # inner resampling
   measures = msr("classif.acc"),
-  tune_ps = ps,
-  terminator = term("evals", 10),
-  tuner = tnr("random_search")
-)
-
-resample(
-  task = tsk("spam")
-  learner = at,
-  resampling = rsmp("holdout") # outer resampling
+  tune_ps = ps, terminator = term("evals", 2), tuner = tnr("random_search")
 )
 ```
+```{r, eval = FALSE}
+resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
+```
+]
+
+---
+
+# AutoTuner in Benchmark
+
+.pull-left[
+`r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
+
+```{r at_benchmark, eval = FALSE}
+design = benchmark_grid(
+  tasks = tsk("spam"), 
+  learners = list(
+    at, 
+    lrn("classif.ranger")
+  ), 
+  resamplings = rsmp("cv", folds = 5))
+bmr = benchmark(design)
+```
+]
+
+.pull-right[
+`r icon::fa("info-circle")` `mlr3viz` package contains `autoplot()` functions for some `mlr3` objects.
+.small[
+```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH}
+library(mlr3viz)
+autoplot(bmr, measure = msr("classif.acc"))
+```
+]
+]
+
 
 ---
 
@@ -442,6 +532,21 @@ class: inverse, center, middle
 # mlr3pipelines
 
 ---
+# Pipelines
+
+So far *mlr3* just modeled this part:
+<div style="
+    border: solid #ff0000 10px;
+    width: 189px;
+    height: 75px;
+    position: fixed;
+    left: 324px;
+    top: 416px;"></div>
+```{r fig_pipelines, echo = FALSE}
+```
+
+Step 1: Use pipelines for preprocessing (feature extraction/selection, missing data imputation etc.).
+Step 2: Use pipelines for ensemble models (later).
 
 
 ---
