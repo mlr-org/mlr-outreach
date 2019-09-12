@@ -546,7 +546,212 @@ So far *mlr3* just modeled this part:
 ```
 
 Step 1: Use pipelines for preprocessing (feature extraction/selection, missing data imputation etc.).
-Step 2: Use pipelines for ensemble models (later).
+Step 2: Use pipelines for ensemble models.
+
+---
+
+# Preprocessing Pipelines
+
+.pull-left[
+We can put preprocessing *PipeOps* infront of a Learner
+
+![pipeline example](assets/mlr3pipelines-slide12.svg)
+
+.small[
+```{r, include=FALSE}
+options(width = 54)
+```
+```{r}
+library(mlr3pipelines)
+
+mlr_pipeops
+```
+]
+]
+
+.pull-right[
+.small[
+```{r, warning=FALSE}
+scale = po("scale") # mlr_pipeops$get("scale")
+encode = po("encode")
+impute = po("impute")
+learner = po("learner", lrn("classif.kknn", scale = FALSE))
+grph = scale %>>% encode %>>% impute %>>% learner
+(glrn = GraphLearner$new(grph))
+```
+]
+]
+
+```{r, include=FALSE}
+options(width = CHAR_WIDTH)
+```
+
+---
+# Acess Hyperparameters of PipeOps
+
+Just like learners, *PipeOps* have hyperparameters that control their behaviour.
+
+Change hyperparameter values in ...
+1. construction of *PipeOp*
+  ```{r, results='hide'}
+  po("impute", method_num = "sample")
+  ```
+2. *PipeOp* before building *Graph*
+  ```{r, results='hide'}
+  impute$param_set$values$method_num = "sample"
+  ```
+3. *Graph* before building *GraphLearner*
+  ```{r, results='hide'}
+  grph$pipeops$impute$param_set$values$method_num = "sample"
+  ```
+4. *GraphLearner*  
+  `r icon::fa("info-circle")` Note the prefix of the *PipeOp* name!
+  ```{r}
+  glrn$param_set$values$impute.method_num = "sample" #<<
+  ```
+
+---
+# Train Graph Learner
+
+.small[
+.pull-left[
+`r icon::fa("arrow-right")` Train the *GraphLearner* like every other mlr3 learner:
+
+```{r}
+tsk = tsk("iris")
+glrn$train(tsk, row_ids = seq(1,150, by = 2))
+```
+
+Most *PipeOps* have parameters (just like a trained model), that are learn from the training data:
+
+![pipeline parameters](assets/mlr3pipelines-slide2.svg)
+
+]
+
+.pull-right[
+
+`r icon::fa("info-circle")` The scaling factors `center` $\mu$ and `scale` $\sigma$ are learnt on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
+
+```{r}
+glrn$model$scale[c("center", "scale")]
+p = glrn$predict(tsk, row_ids = seq(2,150, by = 2))
+```
+]
+]
+
+---
+# PipeOp Parameters
+
+`r icon::fa("arrow-right")` Resample the complete preprocessing pipeline:
+```{r}
+(rr = resample(tsk, glrn, rsmp("cv"), store_models = TRUE))
+```
+
+Each model is scaled according to its traing data:
+```{r}
+rr$learners[[1]]$model$scale$center
+#...
+rr$learners[[10]]$model$scale$center
+```
+---
+# Tune Parameters of PipeOps
+
+We access the *PipeOp* hyperparameter through the parameter with its prefix in the *GraphLearner*.
+.small[
+```{r at_resample}
+ps = ParamSet$new(list(
+  ParamLgl$new("scale.scale"),
+  ParamInt$new("classif.kknn.k", lower = 1, upper = 3)
+))
+```
+
+`r icon::fa("info-circle")` Using a *grid search*, we do not need a termination criterion, as the tuning will terminate once the grid is completed.
+
+```{r}
+instance = TuningInstance$new(
+  task = tsk("iris"),
+  learner = glrn,
+  resampling = rsmp("cv", folds = 3),
+  measures = msr("classif.acc"),
+  param_set = ps,
+  terminator =  term("none")
+)
+
+tt = tnr("grid_search")
+tt$tune(instance)
+instance$archive()[, c(1,9:12)]
+tt$tune_result(instance)
+```
+]
+
+---
+# Control the Path thrugh Parameters
+
+Pipelines become exiting, once you can modify the path the data takes:
+```{r}
+library(mlr3filters)
+grph = po("branch", c("pca", "filter", "nop")) %>>% 
+  gunion(list(
+    po("pca", rank. = 2), 
+    po("filter", flt("variance"), filter.nfeat = 2),
+    po("nop"))) %>>% 
+  po("unbranch") %>>%
+  po("learner", lrn("classif.kknn"))
+plot(grph)
+glrn = GraphLearner$new(grph)
+
+ps = ParamSet$new(list(
+  glrn$param_set$params$branch.selection,
+  ParamInt$new("classif.kknn.k", lower = 1, upper = 3)
+))
+
+instance = TuningInstance$new(
+  task = tsk("iris"),
+  learner = glrn,
+  resampling = rsmp("cv", folds = 3),
+  measures = msr("classif.acc"),
+  param_set = ps,
+  terminator =  term("none")
+)
+
+tt = tnr("grid_search")
+tt$tune(instance)
+tt$tune_result(instance)
+```
+`r icon::fa("info-circle")` Tuning the hyperparameters of *PipeOps* that *can* be active needs dependend parameters. Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
+
+---
+# Tune Path
+
+---
+# Build Ensemble with PipeOps
+
+Now, we do not branch
+```{r}
+grph = po("colapply", applicator = function(x) if (all(x %in% c(0,1))) as.factor(x) else x) %>>% 
+  po("copy", 2) %>>% 
+  gunion(list(
+    po("learner_cv", lrn("regr.rpart")),
+    po("nop")
+  )) %>>%
+  po("featureunion") %>>%
+  po("learner", lrn("regr.lm"))
+plot(grph)
+glrn = GraphLearner$new(grph)
+design = benchmark_grid(tasks = tsk("mtcars"), learners = list(glrn, lrn("regr.lm")), resamplings = rsmp("cv"))
+bmr = benchmark(design = design, store_models = TRUE)
+bmr$aggregate()
+```
+
+---
+# PipeOps not coverd by this tutorial
+
+* Ensembles with `subsample`
+* Feature generation with `mutate`
+* Feature selection with `select`
+* Class balancing with `classbalancing`
+* Prediction combining with `classifavg` and `regravg`
+* and more.
 
 
 ---
