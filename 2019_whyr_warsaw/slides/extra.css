@@ -17,6 +17,13 @@
 img {
   max-width: 100%;
 }
+.img70 img{
+  max-width:70%;
+}
+div>img {
+  margin: auto;
+  display: block;
+}
 .title-slide > h1, .title-slide > h2, .title-slide > h3 {
   color: var(--fg-color);
 }
@@ -40,11 +47,18 @@ code:not(.r) .remark-code-line-highlighted:not(.r) {
   float: left;
   width: 50%;
   margin-left: -30px;
+  border-right: solid 3px #EEE;
+  padding-right: 27px;
 }
+
 .pull-right {
   float: right;
   width: 50%;
   margin-right: -30px;
+}
+pre {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
 }
 /* Code in lists should use less whitespace */
 li pre {

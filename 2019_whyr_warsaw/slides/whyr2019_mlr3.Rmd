@@ -412,12 +412,12 @@ class: inverse, center, middle
 # Benchmarking
 
 ---
-
 # Benchmarking
 
 `r icon::fa("info-circle")` `benchmark()` runs resample on multiple learners and multiple tasks
 
-`r icon::fa("arrow-right")` A sensible choice is usually the combination of all components in an exhaustive gird:
+`r icon::fa("arrow-right")` A sensible choice is usually the combination of all components in an exhaustive grid:
+
 ```{r benchmark1_design}
 design = benchmark_grid(
   tasks = list(tsk("iris"), tsk("spam")),
@@ -426,6 +426,7 @@ design = benchmark_grid(
 )
 design
 ```
+
 ---
 
 # Benchmarking (cont.)
@@ -487,7 +488,7 @@ at = AutoTuner$new(
   learner = lrn("classif.ranger"), # Random Forest
   resampling = rsmp("cv", folds = 3), # inner resampling
   measures = msr("classif.acc"),
-  tune_ps = ps, terminator = term("evals", 2), tuner = tnr("random_search")
+  tune_ps = ps, terminator = term("evals", n_evals = 2), tuner = tnr("random_search")
 )
 ```
 ```{r, eval = FALSE}
@@ -570,12 +571,14 @@ mlr_pipeops
 ]
 
 .pull-right[
+Use **`%>>%`** to connect *PipeOps*:
 .small[
 ```{r, warning=FALSE}
 scale = po("scale") # mlr_pipeops$get("scale")
 encode = po("encode")
 impute = po("impute")
-learner = po("learner", lrn("classif.kknn", scale = FALSE))
+learner = po("learner",
+  lrn("classif.kknn", scale = FALSE))
 grph = scale %>>% encode %>>% impute %>>% learner
 (glrn = GraphLearner$new(grph))
 ```
@@ -640,32 +643,54 @@ p = glrn$predict(tsk, row_ids = seq(2,150, by = 2))
 ]
 
 ---
+# Train Graph Learner (cont.)
+
+1. `glrn$train()` passes the training data through all PipeOps.  
+   Each *PipeOp* transforms the data and saves the transformation parameter.
+2. `glrn$predict()` passes the new data through all PipeOps.  
+   Each *PipeOp* applies the transformation with the stored transformation parameters.  
+   This ensures, that new data is transformed exactly as the training data.
+   
+![trained graph learner](assets/mlr3pipelines-slide20.svg)
+
+
+---
 # PipeOp Parameters
 
 `r icon::fa("arrow-right")` Resample the complete preprocessing pipeline:
+.small[
 ```{r}
 (rr = resample(tsk, glrn, rsmp("cv"), store_models = TRUE))
 ```
+]
 
 Each model is scaled according to its traing data:
+.small[
 ```{r}
 rr$learners[[1]]$model$scale$center
-#...
 rr$learners[[10]]$model$scale$center
 ```
+]
+
+`r icon::fa("info-circle")` Remember: Transforming the data before crossvalidating skews results. Transforming the data independently for training and test leads to wrong results!
+
 ---
 # Tune Parameters of PipeOps
 
-We access the *PipeOp* hyperparameter through the parameter with its prefix in the *GraphLearner*.
 .small[
-```{r at_resample}
+
+.pull-left[
+We access the *PipeOp* hyperparameter through the parameter with its prefix in the *GraphLearner*.
+
+```{r}
 ps = ParamSet$new(list(
   ParamLgl$new("scale.scale"),
-  ParamInt$new("classif.kknn.k", lower = 1, upper = 3)
+  ParamInt$new("classif.kknn.k",
+    lower = 1, upper = 3)
 ))
 ```
 
-`r icon::fa("info-circle")` Using a *grid search*, we do not need a termination criterion, as the tuning will terminate once the grid is completed.
+`r icon::fa("info-circle")` *Grid search* terminates once the grid is completed, hence a termination criterion is optional.
 
 ```{r}
 instance = TuningInstance$new(
@@ -676,33 +701,83 @@ instance = TuningInstance$new(
   param_set = ps,
   terminator =  term("none")
 )
+```
+]
 
+.pull-right[
+```{r}
 tt = tnr("grid_search")
 tt$tune(instance)
-instance$archive()[, c(1,9:12)]
-tt$tune_result(instance)
+instance$archive()[, .(scale.scale, 
+  classif.kknn.k, classif.acc)]
+instance$result_config
+```
+]
+]
+
+---
+# Advaced Pipelines
+
+Pipelines become exiting, once you can modify the path of the data using these *PipeOps*:
+
+<div style="display: block;width: 150px;height: 130px;position: absolute;background-color: #FAFAFACC; left: 200px"></div>
+![PipeOps](assets/mlr3pipelines-slide6.svg)
+
+**Branching** and **Copy** have multiple outputs, so the next *PipeOps* needs multiple inputs.
+To create these...
+
+---
+# Branching
+
+1. Combine multiple *PipeOps* one below each other:  
+  .img70[![mlr3pipelines union](assets/mlr3pipelines-slide4.svg)]
+2. Replicate a *PipeOp* N times one below each other:  
+  .img70[![mlr3pipelines replicate](assets/mlr3pipelines-slide5.svg)]  
+  `r icon::fa("info-circle")` This is especially useful to build bagged learners in combination with *model averaging* (`regravg` or `classifavg`) afterwards.
+  
+---
+# Control Branching through Parameters
+
+.pull-left[
+```{r fig_branch, fig.keep='none'}
+library(mlr3filters)
+
+pca = po("pca", rank. = 2)
+filter = po("filter", flt("variance"), 
+  filter.nfeat = 2)
+
+branch = po("branch",
+  c("pca", "filter", "nop"))
+
+union = gunion(
+  list(pca, filter, po("nop")))
+
+grph = branch %>>% 
+  union %>>% 
+  po("unbranch") %>>%
+  po("learner", lrn("classif.kknn"))
+
+plot(grph)
+```
+]
+
+.pull-right[
+```{r fig_branch, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
 ```
 ]
 
 ---
-# Control the Path thrugh Parameters
+# Tune Branching
 
-Pipelines become exiting, once you can modify the path the data takes:
-```{r}
-library(mlr3filters)
-grph = po("branch", c("pca", "filter", "nop")) %>>% 
-  gunion(list(
-    po("pca", rank. = 2), 
-    po("filter", flt("variance"), filter.nfeat = 2),
-    po("nop"))) %>>% 
-  po("unbranch") %>>%
-  po("learner", lrn("classif.kknn"))
-plot(grph)
+.pull-left[
+```{r tune_branch}
 glrn = GraphLearner$new(grph)
 
 ps = ParamSet$new(list(
-  glrn$param_set$params$branch.selection,
-  ParamInt$new("classif.kknn.k", lower = 1, upper = 3)
+  ParamFct$new("branch.selection",
+    levels = c("pca", "filter", "nop")),
+  ParamInt$new("classif.kknn.k",
+    lower = 1, upper = 3)
 ))
 
 instance = TuningInstance$new(
@@ -713,23 +788,25 @@ instance = TuningInstance$new(
   param_set = ps,
   terminator =  term("none")
 )
+```
+]
 
+.pull-right[
+```{r tune_branch_res}
 tt = tnr("grid_search")
 tt$tune(instance)
-tt$tune_result(instance)
+instance$result_config
 ```
-`r icon::fa("info-circle")` Tuning the hyperparameters of *PipeOps* that *can* be active needs dependend parameters. Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
-
----
-# Tune Path
+`r icon::fa("info-circle")` Tuning hyperparameters of *PipeOps* that *can* be active needs dependend parameters. Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
+]
 
 ---
 # Build Ensemble with PipeOps
 
-Now, we do not branch
-```{r}
-grph = po("colapply", applicator = function(x) if (all(x %in% c(0,1))) as.factor(x) else x) %>>% 
-  po("copy", 2) %>>% 
+.pull-left[
+Instead of branching we can *copy*, to use multiple *PipeOps* on the same data:
+```{r graph_copy, fig.keep='none'}
+grph = po("copy", 2) %>>% 
   gunion(list(
     po("learner_cv", lrn("regr.rpart")),
     po("nop")
@@ -737,10 +814,25 @@ grph = po("colapply", applicator = function(x) if (all(x %in% c(0,1))) as.factor
   po("featureunion") %>>%
   po("learner", lrn("regr.lm"))
 plot(grph)
+```
+]
+
+.pull-right[
+```{r graph_copy, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
+```
+]
+
+---
+# Compare Pipe to normal Learner
+
+```{r}
 glrn = GraphLearner$new(grph)
-design = benchmark_grid(tasks = tsk("mtcars"), learners = list(glrn, lrn("regr.lm")), resamplings = rsmp("cv"))
+design = benchmark_grid(
+  tasks = tsk("mtcars"), 
+  learners = list(glrn, lrn("regr.lm")), 
+  resamplings = rsmp("cv"))
 bmr = benchmark(design = design, store_models = TRUE)
-bmr$aggregate()
+bmr$aggregate()[,-(1:3)]
 ```
 
 ---
@@ -748,17 +840,20 @@ bmr$aggregate()
 
 * Ensembles with `subsample`
 * Feature generation with `mutate`
+* Feature manipulation with `colapply`
 * Feature selection with `select`
 * Class balancing with `classbalancing`
 * Prediction combining with `classifavg` and `regravg`
 * and more.
+
+`r icon::fa("info-circle")` Check the [mlr3book pipelines chapter](https://mlr3book.mlr-org.com/pipelines.html) for exhaustive explenations and more examples.
 
 
 ---
 
 class: inverse, center, middle
 
-# Advanced Usage
+# mlr3 Advanced Usage
 
 ---
 
@@ -782,7 +877,6 @@ as.data.table(rr)
 
 
 ---
-
 # Control of Execution
 
 
