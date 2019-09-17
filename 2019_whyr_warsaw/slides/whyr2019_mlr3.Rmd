@@ -11,7 +11,7 @@ output:
       countIncrementalSlides: false
 
 ---
-```{r whyr2019-mlr3-1, include = FALSE}
+```{r, include = FALSE}
 CHAR_WIDTH = 100
 FIG_WIDTH = 9
 FIG_HEIGHT = 4
@@ -54,7 +54,7 @@ Unsupervised
 
 # What is a machine learning pipeline?
 
-```{r whyr2019-mlr3-2, echo = FALSE}
+```{r fig_pipelines, echo = FALSE}
 knitr::include_graphics("assets/ml-workflow.png", dpi = 50)
 ```
 
@@ -69,14 +69,13 @@ knitr::include_graphics("assets/ml-workflow.png", dpi = 50)
 The **good** news:
 - CRAN serves hundreds of packages for machine learning
 - Many packages for single specific ML-methods
-  - _randomForest_, _ranger_
-  - _e1070::svm_
-  - _kknn_
-  - _xgboost_
+  - `randomForest`, `ranger`
+  - `e1070::svm`
+  - `kknn`
+  - `xgboost`
   - ...
 - Often compliant to the unwritten interface definition:
-
-```{r whyr2019-mlr3-3, eval=FALSE}
+```{r, eval=FALSE}
 model = fit(target ~ ., data = train.data, ...)
 predictions = predict(model, newdata = test.data, ...)
 ```
@@ -88,7 +87,7 @@ predictions = predict(model, newdata = test.data, ...)
 The **bad** news:
 - Some packages' API is "just different"
 - Functionality is always package or model-dependent, even though the procedure might be general
-- Capabilities are often not clearly documented
+- Capabilities often not clearly documented
   - "Can this method handle missing/categorical values?"
 - ML workflow not standardized in R
   - Cross-Validation
@@ -153,19 +152,15 @@ Meta framework for everything machine learning (visualization, tuning, feature s
   * Some self-maintained packages (`backports`, `checkmate`, ...)
 
 ---
-
-# Consequences
-
-* steeper learning curve
-
+# consequences
+* steeper learning curve to learn mlr3
 * multiple packages for different functionality
-  * _mlr3learners_
-  * _mlr3pipelines_
-  * _mlr3tuning_
-  * _mlr3filters_
-  * _mlr3viz_
+  * mlr3learners
+  * mlr3pipelines
+  * mlr3tuning
+  * mlr3filters
+  * mlr3viz
   * ...
-  
 * easier extendable
   * inherit classes and overwrite functionality
 
@@ -177,7 +172,7 @@ class: inverse, center, middle
 ---
 
 # Building Blocks
-```{r whyr2019-mlr3-4, echo = FALSE}
+```{r fig_building_blocks, echo = FALSE}
 knitr::include_graphics("assets/ml_abstraction_colors.svg.png", dpi = 50)
 ```
 
@@ -185,40 +180,44 @@ knitr::include_graphics("assets/ml_abstraction_colors.svg.png", dpi = 50)
 
 # Tasks
 
+
 `r icon::fa("arrow-right")` Create your own task
-```{r whyr2019-mlr3-5}
+```{r}
 TaskClassif$new("iris", iris, target = "Species")
 ```
     
 `r icon::fa("arrow-right")` Retrieve a predefined task from the task dictionary
 
-```{r whyr2019-mlr3-6}
+```{r}
 mlr_tasks
 task = mlr_tasks$get("iris")
 ```
 
 ---
-
 # Learner
 
 `r icon::fa("arrow-right")` Retrieve a predefined learner from the learner dictionary
 
-```{r whyr2019-mlr3-7}
+```{r}
 mlr_learners
 ```
 `r icon::fa("info-circle")` More learners are available after loading `mlr3learners`.
 
-```{r whyr2019-mlr3-8}
+.small[
+```{r}
 learner = mlr_learners$get("classif.rpart")
 learner
 ```
+]
+
+
 
 ---
 # Learner
 
 `r icon::fa("arrow-right")` Querying and setting hyperparameters
 
-```{r whyr2019-mlr3-9}
+```{r}
 # query
 learner$param_set
 # set
@@ -230,7 +229,7 @@ learner$param_set$values = list(xval = 0, cp = 0.1)
 # Learner
 
 `r icon::fa("arrow-right")` Training
-```{r whyr2019-mlr3-10}
+```{r}
 task = mlr_tasks$get("iris")
 learner$train(task, row_ids = seq(1, to = 150, by = 2))
 ```
@@ -238,65 +237,68 @@ learner$train(task, row_ids = seq(1, to = 150, by = 2))
 `r icon::fa("info-circle")` This changes the learner in-place; the model is now stored inside the learner.
 
 ---
-
 # Learner
 
 `r icon::fa("arrow-right")` Accessing the learner model
-
-```{r whyr2019-mlr3-11}
+.small[
+```{r}
 learner$model
 ```
+]
 
-`r icon::fa("smile")` Unified interface, to access *feature importance*, *selected features* etc. for all learners. 
-
-```{r whyr2019-mlr3-12}
+`r icon::fa("smile")` Unified interface, to acess *feature importance*, *selected features* etc. for all learners. 
+.small[
+```{r}
 learner$importance()
 learner$selected_features()
 ```
+]
 
 ---
 # Prediction
 
 `r icon::fa("arrow-right")` Generate predictions
-
-```{r whyr2019-mlr3-13}
+```{r}
 p = learner$predict(task, row_ids = seq(2, to = 150, by = 2))
 head(as.data.table(p), 3)
 ```
 
+
 `r icon::fa("arrow-right")` Confusion matrix
-```{r whyr2019-mlr3-14}
+```{r}
 p$confusion
 ```
+
 
 ---
 
 # Measure
 `r icon::fa("arrow-right")` Retrieve a predefined measure from the measure dictionary
-
-```{r whyr2019-mlr3-15,include=FALSE}
-options(width = CHAR_WIDTH * 1.2)
+.small[
+```{r,include=FALSE}
+options(width = CHAR_WIDTH*1.2)
 ```
-```{r whyr2019-mlr3-16}
+```{r}
 mlr_measures
 (measure = mlr_measures$get("classif.acc"))
 ```
-```{r whyr2019-mlr3-17, include=FALSE}
+```{r, include=FALSE}
 options(width = CHAR_WIDTH)
 ```
 
+]
+
 `r icon::fa("arrow-right")` Calculate performance
-```{r whyr2019-mlr3-18}
+```{r}
 p$score(measure)
 ```
 
 ---
-
 # Resample
 
 `r icon::fa("arrow-right")` Automate train/test splitting and predict with *resampling*.
 .small[
-```{r whyr2019-mlr3-19}
+```{r}
 mlr_resamplings
 resampling = mlr_resamplings$get("cv")
 resampling$param_set$values$folds = 3
@@ -306,12 +308,11 @@ rr$aggregate()
 ```
 ]
 
-`r icon::fa("info-circle")` The default measure for classif tasks is *classification error*.
+`r icon::fa("info-circle")` The default measure for classif tasks is the *classification error*.
 
 ---
 # Recap: Builing Blocks
-```{r whyr2019-mlr3-20, echo = FALSE}
-
+```{r fig_building_blocks, echo = FALSE}
 ```
 
 ---
@@ -331,7 +332,7 @@ Dictionaries store often used objects.
 
 `r icon::fa("info-circle")` Dictionaries can get populated by add-on packages (e.g. `mlr3learners`).
 
-```{r whyr2019-mlr3-21}
+```{r}
 mlr_tasks
 task = mlr_tasks$get("spam")
 task = tsk("spam") # helper
@@ -341,12 +342,13 @@ task = tsk("spam") # helper
 
 # Recap: Example Train/Test
 
-```{r whyr2019-mlr3-22, include = FALSE}
+```{r, include = FALSE}
 library(mlr3)
 set.seed(1)
 ```
 
-```{r whyr2019-mlr3-23}
+
+```{r}
 # Create learning task
 task_iris = TaskClassif$new(id = "iris", backend = iris, 
   target = "Species")
@@ -372,19 +374,22 @@ prediction = learner$predict(task_iris, row_ids = test_set)
 
 # Example Train/Test (cont.)
 
-```{r whyr2019-mlr3-24}
+.small[
+```{r}
 prediction
 # calculate performance
 prediction$confusion
 prediction$score(msr("classif.acc"))
 ```
+]
 
 ---
+
 # Recap: Example Resample
 
 `r icon::fa("arrow-right")` Resampling Object
 
-```{r whyr2019-mlr3-25}
+```{r}
 cv3 = rsmp("cv", folds = 3)
 ```
 
@@ -392,14 +397,14 @@ Splits into train/test are efficiently stored and can be accessed with `$train_s
 
 `r icon::fa("arrow-right")` Resample a **regression tree** on the "Boston housing" data using a **3-fold CV**
 
-```{r whyr2019-mlr3-26}
+```{r}
 # string -> object conversion via dictionary
 rr = resample(tsk("boston_housing"), lrn("regr.rpart"), cv3)
 ```
 
 `r icon::fa("arrow-right")` Aggregated performance
 
-```{r whyr2019-mlr3-27}
+```{r}
 rr$aggregate(msr("regr.mse"))
 ```
 
@@ -409,13 +414,14 @@ class: inverse, center, middle
 # Benchmarking
 
 ---
+
 # Benchmarking
 
 `r icon::fa("info-circle")` `benchmark()` runs `resample()` on multiple learners and multiple tasks
 
 `r icon::fa("arrow-right")` A sensible choice is usually the combination of all components in an exhaustive grid:
 
-```{r whyr2019-mlr3-28 }
+```{r benchmark1_design}
 design = benchmark_grid(
   tasks = list(tsk("iris"), tsk("spam")),
   learners = list(lrn("classif.featureless"), lrn("classif.rpart")),
@@ -429,18 +435,18 @@ design
 # Benchmarking (cont.)
 
 `r icon::fa("arrow-right")` Execute `benchmark()` on the defined design
-
-```{r whyr2019-mlr3-29 }
+.small[
+```{r benchmark1}
 bmr = benchmark(design, store_models = TRUE)
 bmr
 ```
 
 `r icon::fa("arrow-right")` Calculate aggregated performance measure
-
-```{r whyr2019-mlr3-30}
+```{r}
 aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 3:7]
 ```
+]
 
 ---
 
@@ -448,7 +454,7 @@ aggr[, 3:7]
 
 `r icon::fa("arrow-right")` Retrieve objects from the `BenchmarkResult`:
 
-```{r whyr2019-mlr3-31}
+```{r}
 # ResampleResult from 2nd configuration in the design (rpart on iris)
 bmr$resample_result(2) -> rr
 # confusion matrix
@@ -473,9 +479,8 @@ class: inverse, center, middle
 * Nested resampling via class `AutoTuner`
 
 .small[
-```{r whyr2019-mlr3-32 }
-library(mlr3learners)
-library(mlr3tuning)
+```{r at_resample}
+library(mlr3learners); library(mlr3tuning)
 ps = ParamSet$new(list(
   ParamInt$new("min.node.size", lower = 1, upper = 10),
   ParamInt$new("mtry", lower = 10, upper = 50)
@@ -485,15 +490,12 @@ at = AutoTuner$new(
   learner = lrn("classif.ranger"), # Random Forest
   resampling = rsmp("cv", folds = 3), # inner resampling
   measures = msr("classif.acc"),
-  tune_ps = ps, terminator = term("evals", n_evals = 2), 
-  tuner = tnr("random_search")
+  tune_ps = ps, terminator = term("evals", n_evals = 2), tuner = tnr("random_search")
 )
 ```
-
-```{r whyr2019-mlr3-33, eval = FALSE}
+```{r, eval = FALSE}
 resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
 ```
-
 ]
 
 ---
@@ -503,13 +505,13 @@ resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
 .pull-left[
 `r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
 
-```{r whyr2019-mlr3-34, eval = FALSE}
+```{r at_benchmark, eval = FALSE}
 design = benchmark_grid(
-  tasks = tsk("spam"),
+  tasks = tsk("spam"), 
   learners = list(
-    at,
+    at, 
     lrn("classif.ranger")
-  ),
+  ), 
   resamplings = rsmp("cv", folds = 5))
 bmr = benchmark(design)
 ```
@@ -518,7 +520,8 @@ bmr = benchmark(design)
 .pull-right[
 `r icon::fa("info-circle")` _mlr3viz_ package contains `autoplot()` functions for some `mlr3` objects.
 
-```{r whyr2019-mlr3-35, fig.width=0.5*FIG_WIDTH}
+`r icon::fa("info-circle")` `mlr3viz` package contains `autoplot()` functions for some `mlr3` objects.
+```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH}
 library(mlr3viz)
 autoplot(bmr, 
   measure = msr("classif.acc"))
@@ -542,12 +545,10 @@ So far *mlr3* just modeled this part:
     position: fixed;
     left: 324px;
     top: 416px;"></div>
-```{r whyr2019-mlr3-36, echo = FALSE}
-
+```{r fig_pipelines, echo = FALSE}
 ```
 
 Step 1: Use pipelines for preprocessing (feature extraction/selection, missing data imputation etc.).
-
 Step 2: Use pipelines for ensemble models.
 
 ---
@@ -560,10 +561,10 @@ We can put preprocessing *PipeOps* in front of a Learner
 ![pipeline example](assets/mlr3pipelines-slide12.svg)
 
 .small[
-```{r whyr2019-mlr3-37, include=FALSE}
+```{r, include=FALSE}
 options(width = 54)
 ```
-```{r whyr2019-mlr3-38}
+```{r}
 library(mlr3pipelines)
 
 mlr_pipeops
@@ -574,7 +575,7 @@ mlr_pipeops
 .pull-right[
 Use **`%>>%`** to connect *PipeOps*:
 .small[
-```{r whyr2019-mlr3-39, warning=FALSE}
+```{r, warning=FALSE}
 scale = po("scale") # mlr_pipeops$get("scale")
 encode = po("encode")
 impute = po("imputemean")
@@ -586,7 +587,7 @@ grph = scale %>>% encode %>>% impute %>>% learner
 ]
 ]
 
-```{r whyr2019-mlr3-40, include=FALSE}
+```{r, include=FALSE}
 options(width = CHAR_WIDTH)
 ```
 
@@ -616,29 +617,28 @@ options(width = CHAR_WIDTH)
 <!--   ``` -->
 
 ---
-
 # Train Graph Learner
 
+.small[
 .pull-left[
-`r icon::fa("arrow-right")` Train the *GraphLearner* like every other _mlr3_ learner:
+`r icon::fa("arrow-right")` Train the *GraphLearner* like every other mlr3 learner:
 
-```{r whyr2019-mlr3-41}
+```{r}
 tsk = tsk("iris")
-glrn$train(tsk, 
-  row_ids = seq(1, 150, by = 2))
+glrn$train(tsk, row_ids = seq(1,150, by = 2))
 ```
 
-Most *PipeOps* have parameters (just like a trained model), which are fit to the training data:
+Most *PipeOps* have parameters (just like a trained model), that are learnt from the training data:
 
 ![pipeline parameters](assets/mlr3pipelines-slide2.svg)
+
 ]
 
 .pull-right[
 
-`r icon::fa("info-circle")` The scaling factors `center` $\mu$ and `scale` $\sigma$ are fit on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
+`r icon::fa("info-circle")` The scaling factors `center` $\mu$ and `scale` $\sigma$ are learnt on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
 
-.small[
-```{r whyr2019-mlr3-42}
+```{r}
 glrn$model$scale[c("center", "scale")]
 p = glrn$predict(tsk, 
   row_ids = seq(2, 150, by = 2))
@@ -658,24 +658,27 @@ p = glrn$predict(tsk,
    
 ![trained graph learner](assets/mlr3pipelines-slide20.svg)
 
+
 ---
 
 # PipeOp Parameters
 
 `r icon::fa("arrow-right")` Resample the complete preprocessing pipeline:
-
-```{r whyr2019-mlr3-43}
+.small[
+```{r}
 (rr = resample(tsk, glrn, rsmp("cv"), store_models = TRUE))
 ```
+]
 
 Each model is scaled according to its training data:
-
-```{r whyr2019-mlr3-44}
+.small[
+```{r}
 rr$learners[[1]]$model$scale$center
 rr$learners[[10]]$model$scale$center
 ```
+]
 
-`r icon::fa("info-circle")` Remember: Transforming the data before cross-validating skewed results. Transforming the data independently for training and test leads to wrong results!
+`r icon::fa("info-circle")` Remember: Transforming the data before crossvalidating skews results. Transforming the data independently for training and test leads to wrong results!
 
 ---
 
@@ -686,7 +689,7 @@ rr$learners[[10]]$model$scale$center
 .pull-left[
 We access the *PipeOp* hyperparameter through the parameter with its prefix in the *GraphLearner*.
 
-```{r whyr2019-mlr3-45}
+```{r}
 ps = ParamSet$new(list(
   ParamLgl$new("scale.scale"),
   ParamInt$new("classif.kknn.k",
@@ -696,7 +699,7 @@ ps = ParamSet$new(list(
 
 `r icon::fa("info-circle")` *Grid search* terminates once the grid is completed, hence a termination criterion is optional.
 
-```{r whyr2019-mlr3-46}
+```{r}
 instance = TuningInstance$new(
   task = tsk("iris"),
   learner = glrn,
@@ -709,10 +712,10 @@ instance = TuningInstance$new(
 ]
 
 .pull-right[
-```{r whyr2019-mlr3-47}
+```{r}
 tt = tnr("grid_search")
 tt$tune(instance)
-instance$archive()[, .(scale.scale,
+instance$archive()[, .(scale.scale, 
   classif.kknn.k, classif.acc)]
 instance$result_config
 ```
@@ -746,11 +749,11 @@ To create these...
 # Control Branching through Parameters
 
 .pull-left[
-```{r whyr2019-mlr3-48, fig.keep='none'}
+```{r fig_branch, fig.keep='none'}
 library(mlr3filters)
 
 pca = po("pca", rank. = 2)
-filter = po("filter", flt("variance"),
+filter = po("filter", flt("variance"), 
   filter.nfeat = 2)
 
 branch = po("branch",
@@ -759,8 +762,8 @@ branch = po("branch",
 union = gunion(
   list(pca, filter, po("nop")))
 
-grph = branch %>>%
-  union %>>%
+grph = branch %>>% 
+  union %>>% 
   po("unbranch") %>>%
   po("learner", lrn("classif.kknn"))
 
@@ -769,8 +772,7 @@ plot(grph)
 ]
 
 .pull-right[
-```{r whyr2019-mlr3-49, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
-
+```{r fig_branch, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
 ```
 ]
 
@@ -779,7 +781,7 @@ plot(grph)
 # Tune Branching
 
 .pull-left[
-```{r whyr2019-mlr3-50 }
+```{r tune_branch}
 glrn = GraphLearner$new(grph)
 
 ps = ParamSet$new(list(
@@ -801,7 +803,7 @@ instance = TuningInstance$new(
 ]
 
 .pull-right[
-```{r whyr2019-mlr3-51 }
+```{r tune_branch_res}
 tt = tnr("grid_search")
 tt$tune(instance)
 instance$result_config
@@ -815,9 +817,8 @@ Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
 
 .pull-left[
 Instead of branching we can *copy*, to use multiple *PipeOps* on the same data:
-
-```{r whyr2019-mlr3-52, fig.keep='none'}
-grph = po("copy", 2) %>>%
+```{r graph_copy, fig.keep='none'}
+grph = po("copy", 2) %>>% 
   gunion(list(
     po("learner_cv", lrn("regr.rpart")),
     po("nop")
@@ -829,8 +830,7 @@ plot(grph)
 ]
 
 .pull-right[
-```{r whyr2019-mlr3-53, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
-
+```{r graph_copy, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
 ```
 ]
 
@@ -838,11 +838,11 @@ plot(grph)
 
 # Compare Pipe to normal Learner
 
-```{r whyr2019-mlr3-54}
+```{r}
 glrn = GraphLearner$new(grph)
 design = benchmark_grid(
-  tasks = tsk("mtcars"),
-  learners = list(glrn, lrn("regr.lm")),
+  tasks = tsk("mtcars"), 
+  learners = list(glrn, lrn("regr.lm")), 
   resamplings = rsmp("cv"))
 bmr = benchmark(design = design, store_models = TRUE)
 bmr$aggregate()[, -(1:3)]
@@ -874,7 +874,7 @@ class: inverse, center, middle
 
 All result objects (`resample()`, `benchmark()`, tuning, ...) share the same structure:
 
-```{r whyr2019-mlr3-55}
+```{r}
 as.data.table(rr)
 ```
 
@@ -895,8 +895,9 @@ as.data.table(rr)
 
 # Control of Execution
 
+
 `r icon::fa("arrow-right")` Parallelization
-```{r whyr2019-mlr3-56, eval = FALSE}
+```{r, eval = FALSE}
 future::plan("multicore")
 benchmark(grid)
 ```
@@ -905,7 +906,7 @@ benchmark(grid)
 
 `r icon::fa("arrow-right")`  Encapsulation
 
-```{r whyr2019-mlr3-57, eval = FALSE}
+```{r, eval = FALSE}
 ctrl = mlr_control(encapsulate_train = "callr")
 benchmark(grid, ctrl = ctrl)
 ```
@@ -913,6 +914,7 @@ benchmark(grid, ctrl = ctrl)
 * Learner may segfault without tearing down the master session
 * Logs are captured
 * Possibility to have a fallback learner to create predictions
+
 
 ---
 
@@ -936,7 +938,6 @@ benchmark(grid, ctrl = ctrl)
 # Current state
 
 https://github.com/mlr-org/mlr3/wiki/CI-Status
-
 https://github.com/mlr-org/mlr3/wiki/Extension-Packages
 
 
