@@ -294,7 +294,6 @@ p$score(measure)
 
 # Resample
 
-
 `r icon::fa("arrow-right")` Automate train/test splitting and predict with *resampling*.
 .small[
 ```{r whyr2019-mlr3-19}
@@ -302,7 +301,7 @@ mlr_resamplings
 resampling = mlr_resamplings$get("cv")
 resampling$param_set$values$folds = 3
 rr = resample(task, learner, resampling)
-rr$performance()
+rr$score()
 rr$aggregate()
 ```
 ]
@@ -324,7 +323,7 @@ Dictionaries store often used objects.
 |Dictionary|Helper|  |
 |:---------|:-----|--|
 |`mlr_tasks`|`tsk()`|Example tasks (iris, spam, ...)|
-|`mlr_task_generators`|`tgen()`|Syhnthetic task generators|
+|`mlr_task_generators`|`tgen()`|Synthetic task generators|
 |`mlr_learners`|`lrn()`|learners|
 |`mlr_measures`|`msr()`|measures (acc, auc, mse, ...)|
 |`mlr_resamplings`|`rsmp()`|resampling strategies (cv, holdout, bootstrap, ...)|
@@ -518,6 +517,7 @@ bmr = benchmark(design)
 
 .pull-right[
 `r icon::fa("info-circle")` _mlr3viz_ package contains `autoplot()` functions for some `mlr3` objects.
+
 ```{r whyr2019-mlr3-35, fig.width=0.5*FIG_WIDTH}
 library(mlr3viz)
 autoplot(bmr, 
@@ -577,7 +577,7 @@ Use **`%>>%`** to connect *PipeOps*:
 ```{r whyr2019-mlr3-39, warning=FALSE}
 scale = po("scale") # mlr_pipeops$get("scale")
 encode = po("encode")
-impute = po("impute")
+impute = po("imputemean")
 learner = po("learner",
   lrn("classif.kknn", scale = FALSE))
 grph = scale %>>% encode %>>% impute %>>% learner
@@ -594,26 +594,26 @@ options(width = CHAR_WIDTH)
 
 # Access Hyperparameters of PipeOps
 
-Just like learners, *PipeOps* have hyperparameters that control their behaviour.
+<!-- Just like learners, *PipeOps* have hyperparameters that control their behavior. -->
 
-Change hyperparameter values in ...
-1. construction of *PipeOp*
-  ```{r, results='hide'}
-po("impute", method_num = "sample")
-  ```
-2. *PipeOp* before building *Graph*
-  ```{r, results='hide'}
-impute$param_set$values$method_num = "sample"
-  ```
-3. *Graph* before building *GraphLearner*
-  ```{r, results='hide'}
-grph$pipeops$impute$param_set$values$method_num = "sample"
-  ```
-4. *GraphLearner*  
-  `r icon::fa("info-circle")` Note the prefix of the *PipeOp* name!
-  ```{r}
-glrn$param_set$values$impute.method_num = "sample" # <<
-  ```
+<!-- Change hyperparameter values in ... -->
+<!-- 1. construction of *PipeOp* -->
+<!--   ```{r, results='hide'} -->
+<!-- po("impute", method_num = "sample") -->
+<!--   ``` -->
+<!-- 2. *PipeOp* before building *Graph* -->
+<!--   ```{r, results='hide'} -->
+<!-- impute$param_set$values$method_num = "sample" -->
+<!--   ``` -->
+<!-- 3. *Graph* before building *GraphLearner* -->
+<!--   ```{r, results='hide'} -->
+<!-- grph$pipeops$impute$param_set$values$method_num = "sample" -->
+<!--   ``` -->
+<!-- 4. *GraphLearner*   -->
+<!--   `r icon::fa("info-circle")` Note the prefix of the *PipeOp* name! -->
+<!--   ```{r} -->
+<!-- glrn$param_set$values$impute.method_num = "sample" # << -->
+<!--   ``` -->
 
 ---
 
