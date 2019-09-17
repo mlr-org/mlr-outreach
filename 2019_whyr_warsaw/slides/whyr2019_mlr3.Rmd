@@ -303,7 +303,7 @@ mlr_resamplings
 resampling = mlr_resamplings$get("cv")
 resampling$param_set$values$folds = 3
 rr = resample(task, learner, resampling)
-rr$score()
+rr$score() 
 rr$aggregate()
 ```
 ]
@@ -520,7 +520,6 @@ bmr = benchmark(design)
 .pull-right[
 `r icon::fa("info-circle")` _mlr3viz_ package contains `autoplot()` functions for some `mlr3` objects.
 
-`r icon::fa("info-circle")` `mlr3viz` package contains `autoplot()` functions for some `mlr3` objects.
 ```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH}
 library(mlr3viz)
 autoplot(bmr, 
