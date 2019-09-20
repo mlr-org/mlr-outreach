@@ -9,6 +9,7 @@ output:
       # - "metropolis"
       - assets/css/extra.css
     nature:
+      ratio: "16:9"
       highlightStyle: github
       highlightLines: true
       countIncrementalSlides: false
