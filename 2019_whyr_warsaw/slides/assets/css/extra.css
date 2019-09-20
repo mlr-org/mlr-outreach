@@ -1,112 +1,170 @@
-@import url(https://fonts.googleapis.com/css?family=Work+Sans:400,300);
-@import url(https://fonts.googleapis.com/css?family=Roboto+Slab:400);
-@import url(https://fonts.googleapis.com/css?family=IBM+Plex+Mono:300,400);
-@import url(https://fonts.googleapis.com/css?family=Lora:300,300i,400,400i);
-@import url(https://fonts.googleapis.com/css?family=Overpass:300,600);
 
-body {
-  font-family: Work Sans, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
-  font-weight: 400;
-  color: #000000;
-}
 
-.remark-slide-number {
-  font-family: Work Sans, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
-  font-weight: 400;
-  color: #000000;
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
 }
-
-h1, h2, h3, .title-slide > h1 {
-  font-family: Roboto Slab;
-  font-weight: normal;
-  color: #00589A;
+.hide-count .remark-slide-number {
+  display: none;
 }
-
-.remark-code, .remark-inline-code {
-  font-family: IBM Plex Mono, 'Lucida Console', Monaco, monospace;
+.inverse h1 {
+  font-size: 100px;
 }
-
-.remark-code {
-  font-size: 0.8em;
-}
-.remark-inline-code {
-  color: #00589A;
-  font-size: 1em;
-}
-
-:root {
-  --bg-color: #000000;
-  --fg-color: #FFFFFF;
-}
-
-.remark-slide-content > h1 {
-  font-family: Roboto Slab;
-  font-size: 35px;
-  font-weight: normal;
-  color: white;
-  padding-bottom: 20px;
-  margin-top: -85px;
-  overflow: visible;
-  white-space: nowrap;
-}
-.remark-slide-content {
-  border-top: 80px solid var(--bg-color);
-  font-size: 25px;
-}
-.inverse {
-  background-color: var(--bg-color);
-}
-img {
-  max-width: 100%;
-}
-.img70 img{
-  max-width:70%;
-}
-div>img {
-  margin: auto;
-  display: block;
-}
-.title-slide > h1, .title-slide > h2, .title-slide > h3 {
-  color: var(--fg-color);
-}
-.small, .small code>div {
-  font-size: 80%;
-}
-.small pre, .smaller pre {
-  margin: 0;
-}
-p {
-  margin-block-end: 0.5em;
-}
-code:not(.r) .remark-code-line{
-  color: #005600;
-}
-/* somehow indented lines are treated as highlighted, this is a dirty bugfix */
-code:not(.r) .remark-code-line-highlighted:not(.r) {
-  background-color: inherit;
-}
-.pull-left {
-  float: left;
-  width: 50%;
-  margin-left: -30px;
-  border-right: solid 3px #EEE;
-  padding-right: 27px;
-}
-
-.pull-right {
-  float: right;
-  width: 50%;
-  margin-right: -30px;
+.remark-slide-content h1 {
+  margin-top: 10px;
 }
 pre {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
 }
-/* Code in lists should use less whitespace */
-li pre {
-  margin: 0;
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
 }
-li p {
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code-small {
+  font-size: 0.55em;
+}
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
+}
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code-small {
+  font-size: 0.55em;
+}
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
+}
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code55 {
+  font-size: 0.55em;
+}
+.code75 {
+  font-size: 0.75em;
+}
+.font25 {
+  font-size: 25px;
+}
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
+}
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+  color: white;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code55 {
+  font-size: 0.55em;
+}
+.code75 {
+  font-size: 0.75em;
+}
+.font25 {
+  font-size: 25px;
 }
