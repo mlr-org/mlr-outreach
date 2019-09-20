@@ -5,7 +5,10 @@ author: "Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binde
 output:
   xaringan::moon_reader:
     lib_dir: libs
-    css: ["metropolis", "metropolis-fonts", "robot-fonts", "extra.css"]
+    css: 
+      - "metropolis"
+      - "robot-fonts"
+      - "extra.css"
     nature:
       highlightStyle: github
       highlightLines: true

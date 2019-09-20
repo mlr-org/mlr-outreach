@@ -5,7 +5,6 @@
     <meta charset="utf-8" />
     <meta name="author" content="Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder" />
     <link href="libs/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
-    <link href="libs/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
     <link href="libs/remark-css-0.0.1/robot-fonts.css" rel="stylesheet" />
     <link href="libs/font-awesome-5.3.1/css/fontawesome-all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="extra.css" type="text/css" />
@@ -203,8 +202,11 @@ mlr_learners
 ```
 
 ```
-&lt;DictionaryLearner&gt; with 5 stored values
-Keys: classif.debug, classif.featureless, classif.rpart, regr.featureless, regr.rpart
+&lt;DictionaryLearner&gt; with 21 stored values
+Keys: classif.debug, classif.featureless, classif.glmnet, classif.kknn, classif.lda,
+  classif.log_reg, classif.naive_bayes, classif.qda, classif.ranger, classif.rpart,
+  classif.svm, classif.xgboost, regr.featureless, regr.glmnet, regr.kknn, regr.km,
+  regr.lm, regr.ranger, regr.rpart, regr.svm, regr.xgboost
 ```
 <i class="fas  fa-info-circle "></i> More learners are available after loading `mlr3learners`.
 
@@ -421,9 +423,9 @@ rr$score()
 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
    prediction classif.ce
-1:     &lt;list&gt;       0.04
-2:     &lt;list&gt;       0.06
-3:     &lt;list&gt;       0.08
+1:     &lt;list&gt;       0.02
+2:     &lt;list&gt;       0.00
+3:     &lt;list&gt;       0.10
 ```
 
 ```r
@@ -432,7 +434,7 @@ rr$aggregate()
 
 ```
 classif.ce 
-      0.06 
+      0.04 
 ```
 ]
 
