@@ -203,11 +203,8 @@ mlr_learners
 ```
 
 ```
-&lt;DictionaryLearner&gt; with 21 stored values
-Keys: classif.debug, classif.featureless, classif.glmnet, classif.kknn, classif.lda,
-  classif.log_reg, classif.naive_bayes, classif.qda, classif.ranger, classif.rpart,
-  classif.svm, classif.xgboost, regr.featureless, regr.glmnet, regr.kknn, regr.km,
-  regr.lm, regr.ranger, regr.rpart, regr.svm, regr.xgboost
+&lt;DictionaryLearner&gt; with 5 stored values
+Keys: classif.debug, classif.featureless, classif.rpart, regr.featureless, regr.rpart
 ```
 <i class="fas  fa-info-circle "></i> More learners are available after loading `mlr3learners`.
 
@@ -424,9 +421,9 @@ rr$score()
 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
    prediction classif.ce
-1:     &lt;list&gt;       0.02
-2:     &lt;list&gt;       0.00
-3:     &lt;list&gt;       0.10
+1:     &lt;list&gt;       0.04
+2:     &lt;list&gt;       0.06
+3:     &lt;list&gt;       0.08
 ```
 
 ```r
@@ -435,7 +432,7 @@ rr$aggregate()
 
 ```
 classif.ce 
-      0.04 
+      0.06 
 ```
 ]
 
