@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="author" content="Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder" />
     <link href="libs/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
     <link href="libs/remark-css-0.0.1/robot-fonts.css" rel="stylesheet" />
     <link href="libs/font-awesome-5.3.1/css/fontawesome-all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="extra.css" type="text/css" />
@@ -360,12 +361,12 @@ mlr_measures
 ```
 
 ```
-&lt;DictionaryMeasure&gt; with 30 stored values
-Keys: classif.acc, classif.auc, classif.ce, classif.costs, classif.f1, classif.fdr, classif.fn,
-  classif.fnr, classif.for, classif.fp, classif.fpr, classif.npv, classif.ppv, classif.precision,
-  classif.recall, classif.sensitivity, classif.specificity, classif.tn, classif.tnr, classif.tp,
-  classif.tpr, debug, oob_error, regr.mae, regr.mse, regr.rmse, selected_features, time_both, time_predict,
-  time_train
+&lt;DictionaryMeasure&gt; with 31 stored values
+Keys: classif.acc, classif.auc, classif.ce, classif.costs, classif.dor, classif.f_score, classif.fdr,
+  classif.fn, classif.fnr, classif.for, classif.fp, classif.fpr, classif.npv, classif.ppv,
+  classif.precision, classif.recall, classif.sensitivity, classif.specificity, classif.tn, classif.tnr,
+  classif.tp, classif.tpr, debug, oob_error, regr.mae, regr.mse, regr.rmse, selected_features, time_both,
+  time_predict, time_train
 ```
 
 ```r
@@ -423,9 +424,9 @@ rr$score()
 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
    prediction classif.ce
-1:     &lt;list&gt;       0.06
-2:     &lt;list&gt;       0.06
-3:     &lt;list&gt;       0.04
+1:     &lt;list&gt;       0.02
+2:     &lt;list&gt;       0.00
+3:     &lt;list&gt;       0.10
 ```
 
 ```r
@@ -434,7 +435,7 @@ rr$aggregate()
 
 ```
 classif.ce 
-0.05333333 
+      0.04 
 ```
 ]
 
@@ -716,6 +717,7 @@ at = AutoTuner$new(
 )
 ```
 
+
 ```r
 resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
 ```
@@ -747,8 +749,7 @@ bmr = benchmark(design)
 
 ```r
 library(mlr3viz)
-autoplot(bmr, 
-  measure = msr("classif.acc"))
+autoplot(bmr)
 ```
 
 &lt;img src="whyr2019_mlr3_files/figure-html/fig_at_benchmark-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
@@ -846,28 +847,11 @@ grph = scale %&gt;&gt;% encode %&gt;&gt;% impute %&gt;&gt;% learner
 
 # Access Hyperparameters of PipeOps
 
-&lt;!-- Just like learners, *PipeOps* have hyperparameters that control their behavior. --&gt;
+fixme
 
-&lt;!-- Change hyperparameter values in ... --&gt;
-&lt;!-- 1. construction of *PipeOp* --&gt;
-&lt;!--   ```{r, results='hide'} --&gt;
-&lt;!-- po("impute", method_num = "sample") --&gt;
-&lt;!--   ``` --&gt;
-&lt;!-- 2. *PipeOp* before building *Graph* --&gt;
-&lt;!--   ```{r, results='hide'} --&gt;
-&lt;!-- impute$param_set$values$method_num = "sample" --&gt;
-&lt;!--   ``` --&gt;
-&lt;!-- 3. *Graph* before building *GraphLearner* --&gt;
-&lt;!--   ```{r, results='hide'} --&gt;
-&lt;!-- grph$pipeops$impute$param_set$values$method_num = "sample" --&gt;
-&lt;!--   ``` --&gt;
-&lt;!-- 4. *GraphLearner*   --&gt;
-&lt;!--   <i class="fas  fa-info-circle "></i> Note the prefix of the *PipeOp* name! --&gt;
-&lt;!--   ```{r} --&gt;
-&lt;!-- glrn$param_set$values$impute.method_num = "sample" # &lt;&lt; --&gt;
-&lt;!--   ``` --&gt;
 
 ---
+
 # Train Graph Learner
 
 .small[
@@ -880,7 +864,7 @@ tsk = tsk("iris")
 glrn$train(tsk, row_ids = seq(1,150, by = 2))
 ```
 
-Most *PipeOps* have parameters (just like a trained model), that are learnt from the training data:
+Most *PipeOps* have parameters (just like a trained model), that are learned from the training data:
 
 ![pipeline parameters](assets/mlr3pipelines-slide2.svg)
 
@@ -888,7 +872,7 @@ Most *PipeOps* have parameters (just like a trained model), that are learnt from
 
 .pull-right[
 
-<i class="fas  fa-info-circle "></i> The scaling factors `center` `\(\mu\)` and `scale` `\(\sigma\)` are learnt on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
+<i class="fas  fa-info-circle "></i> The scaling factors `center` `\(\mu\)` and `scale` `\(\sigma\)` are learned on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
 
 
 ```r
@@ -940,7 +924,7 @@ p = glrn$predict(tsk,
 &lt;ResampleResult&gt; of 10 iterations
 * Task: iris
 * Learner: scale.encode.imputemean.classif.kknn
-* Performance: 0.047 [classif.ce]
+* Performance: 0.040 [classif.ce]
 * Warnings: 0 in 0 iterations
 * Errors: 0 in 0 iterations
 ```
@@ -955,7 +939,7 @@ rr$learners[[1]]$model$scale$center
 
 ```
 Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.896296     1.256296     5.902222     3.060741 
+    3.706667     1.173333     5.835556     3.076296 
 ```
 
 ```r
@@ -964,7 +948,7 @@ rr$learners[[10]]$model$scale$center
 
 ```
 Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.695556     1.170370     5.825185     3.053333 
+    3.799259     1.210370     5.855556     3.034074 
 ```
 ]
 
@@ -1014,12 +998,12 @@ instance$archive()[, .(scale.scale,
 
 ```
    scale.scale classif.kknn.k classif.acc
-1:       FALSE              2   0.9666667
-2:        TRUE              2   0.9533333
-3:        TRUE              1   0.9533333
-4:       FALSE              3   0.9666667
+1:       FALSE              2   0.9600000
+2:        TRUE              1   0.9533333
+3:       FALSE              1   0.9600000
+4:       FALSE              3   0.9600000
 5:        TRUE              3   0.9533333
-6:       FALSE              1   0.9666667
+6:        TRUE              2   0.9533333
 ```
 
 ```r
@@ -1027,11 +1011,7 @@ instance$result_config
 ```
 
 ```
-$scale.scale
-[1] FALSE
-
-$classif.kknn.k
-[1] 1
+NULL
 ```
 ]
 ]
@@ -1126,11 +1106,7 @@ instance$result_config
 ```
 
 ```
-$branch.selection
-[1] "nop"
-
-$classif.kknn.k
-[1] 2
+NULL
 ```
 <i class="fas  fa-info-circle "></i> Tuning hyperparameters of *PipeOps* that *can* be active needs dependent parameters. 
 Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
@@ -1175,8 +1151,8 @@ bmr$aggregate()[, -(1:3)]
 
 ```
                                  learner_id resampling_id iters regr.mse
-1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10 21.23891
-2:                                  regr.lm            cv    10 10.63873
+1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10 71.05021
+2:                                  regr.lm            cv    10 13.05826
 ```
 
 ---
@@ -1337,7 +1313,24 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
     }
     deleted = true;
   });
-})();</script>
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
 
 <script>
 (function() {

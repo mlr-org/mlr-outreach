@@ -5,7 +5,7 @@ author: "Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binde
 output:
   xaringan::moon_reader:
     lib_dir: libs
-    css: ["metropolis", "robot-fonts", "extra.css"]
+    css: ["metropolis", "metropolis-fonts", "robot-fonts", "extra.css"]
     nature:
       highlightStyle: github
       highlightLines: true
@@ -494,6 +494,7 @@ at = AutoTuner$new(
   tune_ps = ps, terminator = term("evals", n_evals = 2), tuner = tnr("random_search")
 )
 ```
+
 ```{r, eval = FALSE}
 resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
 ```
@@ -506,7 +507,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
 .pull-left[
 `r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
 
-```{r at_benchmark, eval = FALSE}
+```{r at_benchmark}
 design = benchmark_grid(
   tasks = tsk("spam"), 
   learners = list(
@@ -523,8 +524,7 @@ bmr = benchmark(design)
 
 ```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH}
 library(mlr3viz)
-autoplot(bmr, 
-  measure = msr("classif.acc"))
+autoplot(bmr)
 ```
 ]
 
@@ -595,28 +595,11 @@ options(width = CHAR_WIDTH)
 
 # Access Hyperparameters of PipeOps
 
-<!-- Just like learners, *PipeOps* have hyperparameters that control their behavior. -->
+fixme
 
-<!-- Change hyperparameter values in ... -->
-<!-- 1. construction of *PipeOp* -->
-<!--   ```{r, results='hide'} -->
-<!-- po("impute", method_num = "sample") -->
-<!--   ``` -->
-<!-- 2. *PipeOp* before building *Graph* -->
-<!--   ```{r, results='hide'} -->
-<!-- impute$param_set$values$method_num = "sample" -->
-<!--   ``` -->
-<!-- 3. *Graph* before building *GraphLearner* -->
-<!--   ```{r, results='hide'} -->
-<!-- grph$pipeops$impute$param_set$values$method_num = "sample" -->
-<!--   ``` -->
-<!-- 4. *GraphLearner*   -->
-<!--   `r icon::fa("info-circle")` Note the prefix of the *PipeOp* name! -->
-<!--   ```{r} -->
-<!-- glrn$param_set$values$impute.method_num = "sample" # << -->
-<!--   ``` -->
 
 ---
+
 # Train Graph Learner
 
 .small[
@@ -628,7 +611,7 @@ tsk = tsk("iris")
 glrn$train(tsk, row_ids = seq(1,150, by = 2))
 ```
 
-Most *PipeOps* have parameters (just like a trained model), that are learnt from the training data:
+Most *PipeOps* have parameters (just like a trained model), that are learned from the training data:
 
 ![pipeline parameters](assets/mlr3pipelines-slide2.svg)
 
@@ -636,7 +619,7 @@ Most *PipeOps* have parameters (just like a trained model), that are learnt from
 
 .pull-right[
 
-`r icon::fa("info-circle")` The scaling factors `center` $\mu$ and `scale` $\sigma$ are learnt on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
+`r icon::fa("info-circle")` The scaling factors `center` $\mu$ and `scale` $\sigma$ are learned on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
 
 ```{r}
 glrn$model$scale[c("center", "scale")]
@@ -943,4 +926,3 @@ https://github.com/mlr-org/mlr3/wiki/Extension-Packages
 
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
-
