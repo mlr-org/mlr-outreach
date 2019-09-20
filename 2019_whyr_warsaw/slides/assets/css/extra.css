@@ -1,13 +1,37 @@
-@import url(https://fonts.googleapis.com/css?family=Fira+Sans:300,300i,400,400i,500,500i,700,700i);
-@import url(https://cdn.rawgit.com/tonsky/FiraCode/1.204/distr/fira_code.css);
+@import url(https://fonts.googleapis.com/css?family=Work+Sans:400,300);
+@import url(https://fonts.googleapis.com/css?family=Roboto+Slab:400);
+@import url(https://fonts.googleapis.com/css?family=IBM+Plex+Mono:300,400);
+@import url(https://fonts.googleapis.com/css?family=Lora:300,300i,400,400i);
+@import url(https://fonts.googleapis.com/css?family=Overpass:300,600);
 
 body {
-  font-family: 'Fira Sans','Droid Serif', 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
+  font-family: Work Sans, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
+  font-weight: 400;
+  color: #000000;
+}
+
+.remark-slide-number {
+  font-family: Work Sans, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
+  font-weight: 400;
+  color: #000000;
+}
+
+h1, h2, h3, .title-slide > h1 {
+  font-family: Roboto Slab;
+  font-weight: normal;
+  color: #00589A;
 }
 
 .remark-code, .remark-inline-code {
-  font-family: 'Fira Code', 'Lucida Console', Monaco, monospace;
-  font-size: 80%;
+  font-family: IBM Plex Mono, 'Lucida Console', Monaco, monospace;
+}
+
+.remark-code {
+  font-size: 0.8em;
+}
+.remark-inline-code {
+  color: #00589A;
+  font-size: 1em;
 }
 
 :root {
@@ -16,12 +40,18 @@ body {
 }
 
 .remark-slide-content > h1 {
-  margin-top: -70px;
+  font-family: Roboto Slab;
+  font-size: 35px;
+  font-weight: normal;
+  color: white;
+  padding-bottom: 20px;
+  margin-top: -85px;
   overflow: visible;
   white-space: nowrap;
 }
 .remark-slide-content {
   border-top: 80px solid var(--bg-color);
+  font-size: 25px;
 }
 .inverse {
   background-color: var(--bg-color);

@@ -4,10 +4,8 @@
     <title>mlr3</title>
     <meta charset="utf-8" />
     <meta name="author" content="Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder" />
-    <link href="libs/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
-    <link href="libs/remark-css-0.0.1/robot-fonts.css" rel="stylesheet" />
     <link href="libs/font-awesome-5.3.1/css/fontawesome-all.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="extra.css" type="text/css" />
+    <link rel="stylesheet" href="assets/css/extra.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
@@ -37,9 +35,10 @@ Unsupervised
 
 # What is a machine learning pipeline?
 
-&lt;img src="assets/ml-workflow.png" width="90%" style="display: block; margin: auto;" /&gt;
+
 
 <i class="fas  fa-question-circle "></i> Why are pipelines necessary?  
+
 <i class="fas  fa-exclamation-circle "></i> Gives reproducible process that can be validated (through nested crossvalidation).
 
 
@@ -56,6 +55,7 @@ The **good** news:
   - `xgboost`
   - ...
 - Often compliant to the unwritten interface definition:
+
 
 ```r
 model = fit(target ~ ., data = train.data, ...)
@@ -102,17 +102,23 @@ The **bad** news:
 Meta framework for everything machine learning (visualization, tuning, feature selection, preprocessing, bagging, ensembles, ...)
 
 * Monolithic package
+
 * Interfaces &gt; 150 learners  
+
   <i class="fas  fa-arrow-right "></i> Dependencies (direct / recursive): 119 / 1436  
+  
   <i class="fas  fa-arrow-right "></i> Unit tests take &gt; 2h  
+  
   <i class="fas  fa-arrow-right "></i> Package developers changed their API and (unknowingly) broke mlr  
+  
 * High barrier for new contributors
+
 * S3 reaches its limitations in larger software projects
+
 * Many specialized and "hard to find" functions `getBMRAggrPerformances()`
 
-#### Further Design Issues
-
 * Only works on in-memory data
+
 * No nested parallelization
 
 ---
@@ -134,8 +140,9 @@ Meta framework for everything machine learning (visualization, tuning, feature s
   * Some self-maintained packages (`backports`, `checkmate`, ...)
 
 ---
-# consequences
+# Consequences
 * steeper learning curve to learn mlr3
+
 * multiple packages for different functionality
   * mlr3learners
   * mlr3pipelines
@@ -143,6 +150,7 @@ Meta framework for everything machine learning (visualization, tuning, feature s
   * mlr3filters
   * mlr3viz
   * ...
+  
 * easier extendable
   * inherit classes and overwrite functionality
 
@@ -154,25 +162,16 @@ class: inverse, center, middle
 ---
 
 # Building Blocks
-&lt;img src="assets/ml_abstraction_colors.svg.png" width="90%" style="display: block; margin: auto;" /&gt;
+
 
 ---
 
 # Tasks
 
-
 <i class="fas  fa-arrow-right "></i> Create your own task
 
 ```r
 TaskClassif$new("iris", iris, target = "Species")
-```
-
-```
-&lt;TaskClassif:iris&gt; (150 x 5)
-* Target: Species
-* Properties: multiclass
-* Features (4):
-  - dbl (4): Petal.Length, Petal.Width, Sepal.Length, Sepal.Width
 ```
     
 <i class="fas  fa-arrow-right "></i> Retrieve a predefined task from the task dictionary
@@ -180,14 +179,6 @@ TaskClassif$new("iris", iris, target = "Species")
 
 ```r
 mlr_tasks
-```
-
-```
-&lt;DictionaryTask&gt; with 9 stored values
-Keys: boston_housing, german_credit, iris, mtcars, pima, sonar, spam, wine, zoo
-```
-
-```r
 task = mlr_tasks$get("iris")
 ```
 
@@ -200,14 +191,6 @@ task = mlr_tasks$get("iris")
 ```r
 mlr_learners
 ```
-
-```
-&lt;DictionaryLearner&gt; with 21 stored values
-Keys: classif.debug, classif.featureless, classif.glmnet, classif.kknn, classif.lda,
-  classif.log_reg, classif.naive_bayes, classif.qda, classif.ranger, classif.rpart,
-  classif.svm, classif.xgboost, regr.featureless, regr.glmnet, regr.kknn, regr.km,
-  regr.lm, regr.ranger, regr.rpart, regr.svm, regr.xgboost
-```
 <i class="fas  fa-info-circle "></i> More learners are available after loading `mlr3learners`.
 
 .small[
@@ -216,21 +199,10 @@ Keys: classif.debug, classif.featureless, classif.glmnet, classif.kknn, classif.
 learner = mlr_learners$get("classif.rpart")
 learner
 ```
-
-```
-&lt;LearnerClassifRpart:classif.rpart&gt;
-* Model: -
-* Parameters: xval=0
-* Packages: rpart
-* Predict Type: response
-* Feature types: logical, integer, numeric, character, factor, ordered
-* Properties: importance, missings, multiclass, selected_features, twoclass, weights
-```
 ]
 
-
-
 ---
+
 # Learner
 
 <i class="fas  fa-arrow-right "></i> Querying and setting hyperparameters
@@ -239,20 +211,6 @@ learner
 ```r
 # query
 learner$param_set
-```
-
-```
-ParamSet: 
-             id    class lower upper levels default value
-1:     minsplit ParamInt     1   Inf             20      
-2:           cp ParamDbl     0     1           0.01      
-3:   maxcompete ParamInt     0   Inf              4      
-4: maxsurrogate ParamInt     0   Inf              5      
-5:     maxdepth ParamInt     1    30             30      
-6:         xval ParamInt     0   Inf             10     0
-```
-
-```r
 # set
 learner$param_set$values = list(xval = 0, cp = 0.1)
 ```
@@ -271,118 +229,60 @@ learner$train(task, row_ids = seq(1, to = 150, by = 2))
 <i class="fas  fa-info-circle "></i> This changes the learner in-place; the model is now stored inside the learner.
 
 ---
+
 # Learner
 
 <i class="fas  fa-arrow-right "></i> Accessing the learner model
-.small[
+
 
 ```r
 learner$model
 ```
 
-```
-n= 75 
-
-node), split, n, loss, yval, (yprob)
-      * denotes terminal node
-
-1) root 75 50 setosa (0.3333333 0.3333333 0.3333333)  
-  2) Petal.Length&lt; 2.45 25  0 setosa (1.0000000 0.0000000 0.0000000) *
-  3) Petal.Length&gt;=2.45 50 25 versicolor (0.0000000 0.5000000 0.5000000)  
-    6) Petal.Width&lt; 1.65 25  1 versicolor (0.0000000 0.9600000 0.0400000) *
-    7) Petal.Width&gt;=1.65 25  1 virginica (0.0000000 0.0400000 0.9600000) *
-```
-]
 
 <i class="fas  fa-smile "></i> Unified interface, to acess *feature importance*, *selected features* etc. for all learners. 
-.small[
+
 
 ```r
 learner$importance()
-```
-
-```
- Petal.Width Petal.Length Sepal.Length  Sepal.Width 
-     46.1600      41.9280      26.4640      21.9248 
-```
-
-```r
 learner$selected_features()
 ```
 
-```
-[1] "Petal.Length" "Petal.Width" 
-```
-]
 
 ---
+
 # Prediction
 
 <i class="fas  fa-arrow-right "></i> Generate predictions
+
 
 ```r
 p = learner$predict(task, row_ids = seq(2, to = 150, by = 2))
 head(as.data.table(p), 3)
 ```
 
-```
-   row_id  truth response
-1:      2 setosa   setosa
-2:      4 setosa   setosa
-3:      6 setosa   setosa
-```
-
-
 <i class="fas  fa-arrow-right "></i> Confusion matrix
+
 
 ```r
 p$confusion
 ```
 
-```
-            truth
-response     setosa versicolor virginica
-  setosa         25          0         0
-  versicolor      0         24         3
-  virginica       0          1        22
-```
-
-
 ---
 
 # Measure
+
 <i class="fas  fa-arrow-right "></i> Retrieve a predefined measure from the measure dictionary
-.small[
+
+
 
 
 ```r
 mlr_measures
-```
-
-```
-&lt;DictionaryMeasure&gt; with 31 stored values
-Keys: classif.acc, classif.auc, classif.ce, classif.costs, classif.dor, classif.f_score, classif.fdr,
-  classif.fn, classif.fnr, classif.for, classif.fp, classif.fpr, classif.npv, classif.ppv,
-  classif.precision, classif.recall, classif.sensitivity, classif.specificity, classif.tn, classif.tnr,
-  classif.tp, classif.tpr, debug, oob_error, regr.mae, regr.mse, regr.rmse, selected_features, time_both,
-  time_predict, time_train
-```
-
-```r
 (measure = mlr_measures$get("classif.acc"))
 ```
 
-```
-&lt;MeasureClassifACC:classif.acc&gt;
-* Packages: Metrics
-* Range: [0, 1]
-* Minimize: FALSE
-* Properties: -
-* Predict type: response
-```
 
-
-]
 
 <i class="fas  fa-arrow-right "></i> Calculate performance
 
@@ -390,59 +290,30 @@ Keys: classif.acc, classif.auc, classif.ce, classif.costs, classif.dor, classif.
 p$score(measure)
 ```
 
-```
-classif.acc 
-  0.9466667 
-```
-
 ---
+
 # Resample
 
 <i class="fas  fa-arrow-right "></i> Automate train/test splitting and predict with *resampling*.
-.small[
+
 
 ```r
 mlr_resamplings
-```
-
-```
-&lt;DictionaryResampling&gt; with 6 stored values
-Keys: bootstrap, custom, cv, holdout, repeated_cv, subsampling
-```
-
-```r
 resampling = mlr_resamplings$get("cv")
 resampling$param_set$values$folds = 3
 rr = resample(task, learner, resampling)
 rr$score() 
-```
-
-```
-            task task_id               learner    learner_id     resampling resampling_id iteration
-1: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         1
-2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
-3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
-   prediction classif.ce
-1:     &lt;list&gt;       0.02
-2:     &lt;list&gt;       0.00
-3:     &lt;list&gt;       0.10
-```
-
-```r
 rr$aggregate()
 ```
 
-```
-classif.ce 
-      0.04 
-```
-]
 
 <i class="fas  fa-info-circle "></i> The default measure for classif tasks is the *classification error*.
 
 ---
+
 # Recap: Builing Blocks
-&lt;img src="assets/ml_abstraction_colors.svg.png" width="90%" style="display: block; margin: auto;" /&gt;
+
+
 
 ---
 
@@ -458,20 +329,11 @@ Dictionaries store often used objects.
 |`mlr_measures`|`msr()`|measures (acc, auc, mse, ...)|
 |`mlr_resamplings`|`rsmp()`|resampling strategies (cv, holdout, bootstrap, ...)|
 
-
 <i class="fas  fa-info-circle "></i> Dictionaries can get populated by add-on packages (e.g. `mlr3learners`).
 
 
 ```r
 mlr_tasks
-```
-
-```
-&lt;DictionaryTask&gt; with 9 stored values
-Keys: boston_housing, german_credit, iris, mtcars, pima, sonar, spam, wine, zoo
-```
-
-```r
 task = mlr_tasks$get("spam")
 task = tsk("spam") # helper
 ```
@@ -503,53 +365,21 @@ test_set = setdiff(seq_len(task_iris$nrow), train_set)
 learner$train(task_iris, row_ids = train_set)
 
 # Predict data
-prediction = learner$predict(task_iris, row_ids = test_set)
+prediction = learner$predict(task_iris, 
+  row_ids = test_set)
 ```
 
 ---
 
 # Example Train/Test (cont.)
 
-.small[
 
 ```r
 prediction
-```
-
-```
-&lt;PredictionClassif&gt; for 30 observations:
-    row_id     truth  response
-         4    setosa    setosa
-         5    setosa    setosa
-         8    setosa    setosa
----                           
-       128 virginica virginica
-       137 virginica virginica
-       139 virginica virginica
-```
-
-```r
 # calculate performance
 prediction$confusion
-```
-
-```
-            truth
-response     setosa versicolor virginica
-  setosa         11          0         0
-  versicolor      0         12         1
-  virginica       0          0         6
-```
-
-```r
 prediction$score(msr("classif.acc"))
 ```
-
-```
-classif.acc 
-  0.9666667 
-```
-]
 
 ---
 
@@ -569,7 +399,8 @@ Splits into train/test are efficiently stored and can be accessed with `$train_s
 
 ```r
 # string -&gt; object conversion via dictionary
-rr = resample(tsk("boston_housing"), lrn("regr.rpart"), cv3)
+rr = resample(tsk("boston_housing"), lrn("regr.rpart"), 
+  cv3)
 ```
 
 <i class="fas  fa-arrow-right "></i> Aggregated performance
@@ -577,11 +408,6 @@ rr = resample(tsk("boston_housing"), lrn("regr.rpart"), cv3)
 
 ```r
 rr$aggregate(msr("regr.mse"))
-```
-
-```
-regr.mse 
-3.452013 
 ```
 
 ---
@@ -607,20 +433,12 @@ design = benchmark_grid(
 design
 ```
 
-```
-            task                     learner     resampling
-1: &lt;TaskClassif&gt; &lt;LearnerClassifFeatureless&gt; &lt;ResamplingCV&gt;
-2: &lt;TaskClassif&gt;       &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;
-3: &lt;TaskClassif&gt; &lt;LearnerClassifFeatureless&gt; &lt;ResamplingCV&gt;
-4: &lt;TaskClassif&gt;       &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;
-```
-
 ---
 
 # Benchmarking (cont.)
 
 <i class="fas  fa-arrow-right "></i> Execute `benchmark()` on the defined design
-.small[
+
 
 ```r
 bmr = benchmark(design, store_models = TRUE)
@@ -638,6 +456,7 @@ bmr
 
 <i class="fas  fa-arrow-right "></i> Calculate aggregated performance measure
 
+
 ```r
 aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 3:7]
@@ -650,7 +469,6 @@ aggr[, 3:7]
 3:    spam classif.featureless            cv    10   0.6059511
 4:    spam       classif.rpart            cv    10   0.8919744
 ```
-]
 
 ---
 
@@ -660,29 +478,18 @@ aggr[, 3:7]
 
 
 ```r
-# ResampleResult from 2nd configuration in the design (rpart on iris)
+# ResampleResult from 2nd configuration in the design 
+# (rpart on iris)
+
 bmr$resample_result(2) -&gt; rr
+
 # confusion matrix
 rr$prediction()$confusion
-```
 
-```
-            truth
-response     setosa versicolor virginica
-  setosa         50          0         0
-  versicolor      0         45         5
-  virginica       0          5        45
-```
-
-```r
 # Average feature importance
 library(magrittr)
-sapply(rr$data$learner, function(x) x$importance()) %&gt;% apply(1, mean)
-```
-
-```
-Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    80.38783     73.93299     49.17892     32.42676 
+sapply(rr$data$learner, function(x) x$importance()) %&gt;% 
+  apply(1, mean)
 ```
 
 ---
@@ -699,7 +506,6 @@ class: inverse, center, middle
 * Budget via class `Terminator`: iterations, performance, runtime, real time
 * Nested resampling via class `AutoTuner`
 
-.small[
 
 ```r
 library(mlr3learners); library(mlr3tuning)
@@ -709,10 +515,11 @@ ps = ParamSet$new(list(
 ))
 
 at = AutoTuner$new(
-  learner = lrn("classif.ranger"), # Random Forest
-  resampling = rsmp("cv", folds = 3), # inner resampling
+  learner = lrn("classif.ranger"),
+  resampling = rsmp("cv", folds = 3),
   measures = msr("classif.acc"),
-  tune_ps = ps, terminator = term("evals", n_evals = 2), tuner = tnr("random_search")
+  tune_ps = ps, terminator = term("evals", n_evals = 2), 
+  tuner = tnr("random_search")
 )
 ```
 
@@ -720,7 +527,6 @@ at = AutoTuner$new(
 ```r
 resample(tsk("spam"), learner = at, rsmp("holdout")) # outer resampling
 ```
-]
 
 ---
 
@@ -737,7 +543,8 @@ design = benchmark_grid(
     at, 
     lrn("classif.ranger")
   ), 
-  resamplings = rsmp("cv", folds = 5))
+  resamplings = rsmp("cv", 
+    folds = 5))
 bmr = benchmark(design)
 ```
 ]
@@ -750,8 +557,6 @@ bmr = benchmark(design)
 library(mlr3viz)
 autoplot(bmr)
 ```
-
-&lt;img src="whyr2019_mlr3_files/figure-html/fig_at_benchmark-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
@@ -771,7 +576,7 @@ So far *mlr3* just modeled this part:
     position: fixed;
     left: 324px;
     top: 416px;"&gt;&lt;/div&gt;
-&lt;img src="assets/ml-workflow.png" width="90%" style="display: block; margin: auto;" /&gt;
+
 
 Step 1: Use pipelines for preprocessing (feature extraction/selection, missing data imputation etc.).
 Step 2: Use pipelines for ensemble models.
@@ -785,7 +590,6 @@ We can put preprocessing *PipeOps* in front of a Learner
 
 ![pipeline example](assets/mlr3pipelines-slide12.svg)
 
-.small[
 
 
 ```r
@@ -794,50 +598,26 @@ library(mlr3pipelines)
 mlr_pipeops
 ```
 
-```
-&lt;DictionaryPipeOp&gt; with 38 stored values
-Keys: boxcox, branch, chunk, classbalancing,
-  classifavg, colapply, copy, encode,
-  encodelmer, featureunion, filter, histbin,
-  ica, imputehist, imputemean, imputemedian,
-  imputenewlvl, imputesample, kernelpca,
-  learner, learner_cv, missind, modelmatrix,
-  mutate, nop, pca, quantilebin, regravg,
-  removeconstants, scale, scalemaxabs,
-  scalerange, select, smote, spatialsign,
-  subsample, unbranch, yeojohnson
-```
-]
 ]
 
 .pull-right[
 Use **`%&gt;&gt;%`** to connect *PipeOps*:
-.small[
+
 
 ```r
-scale = po("scale") # mlr_pipeops$get("scale")
+scale = po("scale") 
 encode = po("encode")
 impute = po("imputemean")
 learner = po("learner",
-  lrn("classif.kknn", scale = FALSE))
-grph = scale %&gt;&gt;% encode %&gt;&gt;% impute %&gt;&gt;% learner
+  lrn("classif.kknn", 
+    scale = FALSE))
+grph = scale %&gt;&gt;% 
+  encode %&gt;&gt;% 
+  impute %&gt;&gt;% 
+  learner
 (glrn = GraphLearner$new(grph))
 ```
 
-```
-&lt;GraphLearner:scale.encode.imputemean.classif.kknn&gt;
-* Model: -
-* Parameters: encode.method=one-hot,
-  classif.kknn.scale=FALSE
-* Packages: stats
-* Predict Type: response
-* Feature types: logical, integer, numeric,
-  character, factor, ordered, POSIXct
-* Properties: importance, missings, multiclass,
-  oob_error, selected_features, twoclass,
-  weights
-```
-]
 ]
 
 
@@ -853,14 +633,15 @@ fixme
 
 # Train Graph Learner
 
-.small[
 .pull-left[
 <i class="fas  fa-arrow-right "></i> Train the *GraphLearner* like every other mlr3 learner:
 
 
 ```r
 tsk = tsk("iris")
-glrn$train(tsk, row_ids = seq(1,150, by = 2))
+glrn$train(tsk, 
+  row_ids = seq(1, 150, 
+    by = 2))
 ```
 
 Most *PipeOps* have parameters (just like a trained model), that are learned from the training data:
@@ -875,24 +656,12 @@ Most *PipeOps* have parameters (just like a trained model), that are learned fro
 
 
 ```r
-glrn$model$scale[c("center", "scale")]
-```
-
-```
-$center
-Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.776000     1.218667     5.840000     3.064000 
-
-$scale
-Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-   1.7829402    0.7907734    0.8058905    0.4354681 
-```
-
-```r
+glrn$model$scale[c("center", 
+  "scale")]
 p = glrn$predict(tsk, 
-  row_ids = seq(2, 150, by = 2))
+  row_ids = seq(2, 150, 
+    by = 2))
 ```
-]
 ]
 
 ---
@@ -913,51 +682,27 @@ p = glrn$predict(tsk,
 # PipeOp Parameters
 
 <i class="fas  fa-arrow-right "></i> Resample the complete preprocessing pipeline:
-.small[
+
 
 ```r
-(rr = resample(tsk, glrn, rsmp("cv"), store_models = TRUE))
+rr = resample(tsk, glrn, rsmp("cv"), store_models = TRUE)
 ```
 
-```
-&lt;ResampleResult&gt; of 10 iterations
-* Task: iris
-* Learner: scale.encode.imputemean.classif.kknn
-* Performance: 0.040 [classif.ce]
-* Warnings: 0 in 0 iterations
-* Errors: 0 in 0 iterations
-```
-]
 
 Each model is scaled according to its training data:
-.small[
+
 
 ```r
 rr$learners[[1]]$model$scale$center
-```
-
-```
-Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.706667     1.173333     5.835556     3.076296 
-```
-
-```r
 rr$learners[[10]]$model$scale$center
 ```
 
-```
-Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.799259     1.210370     5.855556     3.034074 
-```
-]
 
 <i class="fas  fa-info-circle "></i> Remember: Transforming the data before crossvalidating skews results. Transforming the data independently for training and test leads to wrong results!
 
 ---
 
 # Tune Parameters of PipeOps
-
-.small[
 
 .pull-left[
 We access the *PipeOp* hyperparameter through the parameter with its prefix in the *GraphLearner*.
@@ -993,31 +738,13 @@ tt = tnr("grid_search")
 tt$tune(instance)
 instance$archive()[, .(scale.scale, 
   classif.kknn.k, classif.acc)]
-```
-
-```
-   scale.scale classif.kknn.k classif.acc
-1:       FALSE              2   0.9600000
-2:        TRUE              1   0.9533333
-3:       FALSE              1   0.9600000
-4:       FALSE              3   0.9600000
-5:        TRUE              3   0.9533333
-6:        TRUE              2   0.9533333
-```
-
-```r
 instance$result_config
 ```
-
-```
-NULL
-```
-]
 ]
 
 ---
 
-# Advaced Pipelines
+# Advanced Pipelines
 
 Pipelines become exiting, once you can modify the path of the data using these *PipeOps*:
 
@@ -1066,7 +793,7 @@ plot(grph)
 ]
 
 .pull-right[
-&lt;img src="whyr2019_mlr3_files/figure-html/fig_branch-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
 ]
 
 ---
@@ -1103,10 +830,6 @@ tt = tnr("grid_search")
 tt$tune(instance)
 instance$result_config
 ```
-
-```
-NULL
-```
 <i class="fas  fa-info-circle "></i> Tuning hyperparameters of *PipeOps* that *can* be active needs dependent parameters. 
 Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
 ]
@@ -1130,7 +853,7 @@ plot(grph)
 ]
 
 .pull-right[
-&lt;img src="whyr2019_mlr3_files/figure-html/graph_copy-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
+
 ]
 
 ---
@@ -1146,12 +869,6 @@ design = benchmark_grid(
   resamplings = rsmp("cv"))
 bmr = benchmark(design = design, store_models = TRUE)
 bmr$aggregate()[, -(1:3)]
-```
-
-```
-                                 learner_id resampling_id iters regr.mse
-1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10 71.05021
-2:                                  regr.lm            cv    10 13.05826
 ```
 
 ---
@@ -1185,20 +902,6 @@ All result objects (`resample()`, `benchmark()`, tuning, ...) share the same str
 as.data.table(rr)
 ```
 
-```
-             task        learner     resampling iteration prediction
- 1: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         1     &lt;list&gt;
- 2: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         2     &lt;list&gt;
- 3: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         3     &lt;list&gt;
- 4: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         4     &lt;list&gt;
- 5: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         5     &lt;list&gt;
- 6: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         6     &lt;list&gt;
- 7: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         7     &lt;list&gt;
- 8: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         8     &lt;list&gt;
- 9: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;         9     &lt;list&gt;
-10: &lt;TaskClassif&gt; &lt;GraphLearner&gt; &lt;ResamplingCV&gt;        10     &lt;list&gt;
-```
-
 ---
 
 # Internal Data Structure
@@ -1215,7 +918,6 @@ as.data.table(rr)
 ---
 
 # Control of Execution
-
 
 <i class="fas  fa-arrow-right "></i> Parallelization
 
@@ -1237,7 +939,6 @@ benchmark(grid, ctrl = ctrl)
 * Learner may segfault without tearing down the master session
 * Logs are captured
 * Possibility to have a fallback learner to create predictions
-
 
 ---
 
