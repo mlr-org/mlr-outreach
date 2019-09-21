@@ -1,7 +1,7 @@
 ---
-title: "mlr3"
-subtitle: "Modern machine learning in R"
-author: "Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder"
+title: "foo"
+subtitle: ""
+author: ""
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -53,6 +53,15 @@ class: middle left hide-count
 
 <img src="https://raw.githubusercontent.com/mlr-org/mlr/master/man/figures/logo_navbar.png">
 
+.avatars[
+
+<img src="avatars/michel.jpg", max.width = "100%">
+<img src="avatars/bernd.jpg", max.width = "100%">
+<img src="avatars/jakob.jpg", max.width = "100%">
+<img src="avatars/patrick.jpg", max.width = "100%">
+<img src="avatars/martin.jpg", max.width = "100%">
+
+]
 
 .talk-meta[
 .talk-title[
@@ -366,7 +375,7 @@ rr = resample(task, learner, resampling)
 
 # Resample
 
-```{r, eval = FALSE}
+```{r, eval = TRUE}
 rr$score() 
 ```
 
@@ -504,7 +513,7 @@ design
 
 `r icon::fa("arrow-right")` Execute `benchmark()` on the defined design
 
-```{r benchmark1, eval = F}
+```{r benchmark1, eval = T}
 bmr = benchmark(design, store_models = TRUE)
 bmr
 ```
@@ -515,7 +524,7 @@ bmr
 
 `r icon::fa("arrow-right")` Calculate aggregated performance measure
 
-```{r, eval = F}
+```{r, eval = T}
 aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 3:7]
 ```
@@ -526,7 +535,7 @@ aggr[, 3:7]
 
 `r icon::fa("arrow-right")` Retrieve objects from the `BenchmarkResult`:
 
-```{r, eval = F}
+```{r, eval = T}
 # ResampleResult from 2nd configuration in the design 
 # (rpart on iris)
 
@@ -540,7 +549,7 @@ rr$prediction()$confusion
 
 # Benchmarking (cont.)
 
-```{r, eval = F}
+```{r, eval = T}
 # Average feature importance
 library(magrittr)
 sapply(rr$data$learner, function(x) x$importance()) %>% 
@@ -574,7 +583,7 @@ class: inverse, center, middle
 
 # Tuning
 
-```{r at_resample}
+```{r at_resample, eval = T}
 library(mlr3learners)
 library(mlr3tuning)
 
@@ -597,7 +606,7 @@ at = AutoTuner$new(
 
 # Tuning
 
-```{r }
+```{r, eval = T}
 resample(tsk("spam"), learner = at, rsmp("holdout"))
 ```
 
@@ -608,7 +617,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 .pull-left[
 `r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
 .code75[
-```{r at_benchmark}
+```{r at_benchmark, eval = T}
 design = benchmark_grid(
   tasks = tsk("spam"), 
   learners = list(
@@ -632,7 +641,7 @@ autoplot(bmr)
 
 .pull-right[
 
-```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
+```{r eval = T, fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
 library(mlr3viz)
 autoplot(bmr)
 ```
@@ -658,7 +667,7 @@ as.data.table(rr)
 
 # Internal Data Structure
 
-#### Combining R6 and data.table
+#### Combining `R6` and `data.table`
 * Not the objects are stored, but pointers to them
 
 * Inexpensive to work on:
@@ -676,44 +685,81 @@ as.data.table(rr)
 future::plan("multicore")
 benchmark(grid)
 ```
-* runs each resampling iteration as a job<br/>
+
+* runs each resampling iteration as a job
+
 * also allows nested resampling (although not needed here)
+
+---
+
+# Control of Execution
 
 `r icon::fa("arrow-right")`  Encapsulation
 
 ```{r, eval = FALSE}
-ctrl = mlr_control(encapsulate_train = "callr")
-benchmark(grid, ctrl = ctrl)
+learner$encapsulate = c(train = "callr", predict = "callr")
 ```
+
 * Spawns a separate R process to train the learner
+
 * Learner may segfault without tearing down the master session
+
 * Logs are captured
+
 * Possibility to have a fallback learner to create predictions
 
 ---
 
 # Out-of-memory Data
 
-* Task stores data in a `DataBackend`:
-    * `DataBackendDataTable`: Default backend for dense data (in-memory)
-    * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
-    * `mlr3db::DataBackendDplyr`: Backend for many DBMS (out-of-memory)
-    * `DataBackendCbind`: Combine backends thorugh `task$cbind(backend)` (virtual)
-    * `DataBackendRbind`: Combine backends thorugh `task$rbind(backend)` (virtual)
+Task stores data in a `DataBackend`:
+  * `DataBackendDataTable`: Default backend for dense data (in-memory)
+  
+  * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
+  
+  * `mlr3db::DataBackendDplyr`: Backend for many DBMS (out-of-memory)
+  
+  * `DataBackendCbind`: Combine backends thorugh `task$cbind(backend)` (virtual)
+  
+  * `DataBackendRbind`: Combine backends thorugh `task$rbind(backend)` (virtual)
     
-* Backends are immutable
-    * Filtering rows or selecting columns just modifies the "view" on the data
-    * Multiple tasks can share the same backend
+---
+
+# Out-of-memory Data
+
+Backends are immutable
+  * Filtering rows or selecting columns just modifies the "view" on the data
+  * Multiple tasks can share the same backend
     
-* Example: Interface a read-only MariaDB with `DataBackendDplyr`, add generated features via `DataBackendDataTable`
+Example: 
+1. Interface a read-only MariaDB with `DataBackendDplyr`
+1. Add generated features via `DataBackendDataTable`
 
 ---
 
-# Current state
+# Resources
+
+.pull-left[
+<iframe width="560" height="315" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+]
+
+.pull-right[
+
+[CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
+
+[Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
+
+[mlr3book](https://mlr3book.mlr-org.com)
+
+Want to contribute?  
+[mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+
+]
+
+---
 
 https://github.com/mlr-org/mlr3/wiki/CI-Status
 https://github.com/mlr-org/mlr3/wiki/Extension-Packages
-
 
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
@@ -772,6 +818,13 @@ extra_css = list(
     ),
     ".font25" = list(
       "font-size" = "25px"
+    ),
+    ".avatars" = list(
+     "width" = "150px",
+     "white-space" = "nowrap",
+     "left" = "300px",
+     "top" = "30px",
+     "position" = "absolute"
     )
 )
 write_extra_css(css = extra_css, outfile = here::here("2019_whyr_warsaw/slides/assets/css/extra.css"))

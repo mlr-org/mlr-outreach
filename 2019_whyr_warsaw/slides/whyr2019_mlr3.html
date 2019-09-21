@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
   <head>
-    <title>mlr3</title>
+    <title>foo</title>
     <meta charset="utf-8" />
-    <meta name="author" content="Michel Lang, Bernd Bischl, Jakob Richter, Patrick Schratz, Martin Binder" />
+    <meta name="author" content="" />
     <link href="libs/font-awesome/css/fontawesome-all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/theme.css" type="text/css" />
     <link rel="stylesheet" href="assets/css/extra.css" type="text/css" />
@@ -19,6 +19,15 @@ class: middle left hide-count
 
 &lt;img src="https://raw.githubusercontent.com/mlr-org/mlr/master/man/figures/logo_navbar.png"&gt;
 
+.avatars[
+
+&lt;img src="avatars/michel.jpg", max.width = "100%"&gt;
+&lt;img src="avatars/bernd.jpg", max.width = "100%"&gt;
+&lt;img src="avatars/jakob.jpg", max.width = "100%"&gt;
+&lt;img src="avatars/patrick.jpg", max.width = "100%"&gt;
+&lt;img src="avatars/martin.jpg", max.width = "100%"&gt;
+
+]
 
 .talk-meta[
 .talk-title[
@@ -415,10 +424,10 @@ mlr_measures
 ```
 
 ```
-# &lt;DictionaryMeasure&gt; with 30 stored values
-# Keys: classif.acc, classif.auc, classif.ce, classif.costs, classif.f1, classif.fdr,
-#   classif.fn, classif.fnr, classif.for, classif.fp, classif.fpr, classif.npv,
-#   classif.ppv, classif.precision, classif.recall, classif.sensitivity,
+# &lt;DictionaryMeasure&gt; with 31 stored values
+# Keys: classif.acc, classif.auc, classif.ce, classif.costs, classif.dor, classif.f_score,
+#   classif.fdr, classif.fn, classif.fnr, classif.for, classif.fp, classif.fpr,
+#   classif.npv, classif.ppv, classif.precision, classif.recall, classif.sensitivity,
 #   classif.specificity, classif.tn, classif.tnr, classif.tp, classif.tpr, debug,
 #   oob_error, regr.mae, regr.mse, regr.rmse, selected_features, time_both, time_predict,
 #   time_train
@@ -469,6 +478,17 @@ rr = resample(task, learner, resampling)
 rr$score() 
 ```
 
+```
+#             task task_id               learner    learner_id     resampling resampling_id iteration
+# 1: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         1
+# 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
+# 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
+#    prediction classif.ce
+# 1:     &lt;list&gt;       0.08
+# 2:     &lt;list&gt;       0.04
+# 3:     &lt;list&gt;       0.06
+```
+
 .code55[
 
 ```
@@ -477,7 +497,7 @@ rr$score()
 # 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
 # 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
 #    prediction classif.ce
-# 1:     &lt;list&gt;       0.06
+# 1:     &lt;list&gt;       0.08
 # 2:     &lt;list&gt;       0.04
 # 3:     &lt;list&gt;       0.06
 ```
@@ -490,7 +510,7 @@ rr$aggregate()
 
 ```
 # classif.ce 
-# 0.05333333
+#       0.06
 ```
 
 <i class="fas  fa-info-circle "></i> The default measure for classif tasks is the *classification error*.
@@ -669,6 +689,15 @@ bmr = benchmark(design, store_models = TRUE)
 bmr
 ```
 
+```
+# &lt;BenchmarkResult&gt; of 40 rows with 4 resampling runs
+#  nr task_id          learner_id resampling_id iters warnings errors
+#   1    iris classif.featureless            cv    10        0      0
+#   2    iris       classif.rpart            cv    10        0      0
+#   3    spam classif.featureless            cv    10        0      0
+#   4    spam       classif.rpart            cv    10        0      0
+```
+
 ---
 
 # Benchmarking (cont.)
@@ -679,6 +708,14 @@ bmr
 ```r
 aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 3:7]
+```
+
+```
+#    task_id          learner_id resampling_id iters classif.acc
+# 1:    iris classif.featureless            cv    10   0.2066667
+# 2:    iris       classif.rpart            cv    10   0.9333333
+# 3:    spam classif.featureless            cv    10   0.6059511
+# 4:    spam       classif.rpart            cv    10   0.8919744
 ```
 
 ---
@@ -698,6 +735,14 @@ rr = bmr$resample_result(2)
 rr$prediction()$confusion
 ```
 
+```
+#             truth
+# response     setosa versicolor virginica
+#   setosa         50          0         0
+#   versicolor      0         45         5
+#   virginica       0          5        45
+```
+
 ---
 
 # Benchmarking (cont.)
@@ -708,6 +753,11 @@ rr$prediction()$confusion
 library(magrittr)
 sapply(rr$data$learner, function(x) x$importance()) %&gt;% 
   apply(1, mean)
+```
+
+```
+# Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
+#     80.38783     73.93299     49.17892     32.42676
 ```
 
 ---
@@ -770,7 +820,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 # &lt;ResampleResult&gt; of 1 iterations
 # * Task: spam
 # * Learner: classif.ranger.tuned
-# * Performance: 0.053 [classif.ce]
+# * Performance: 0.055 [classif.ce]
 # * Warnings: 0 in 0 iterations
 # * Errors: 0 in 0 iterations
 ```
@@ -829,17 +879,35 @@ as.data.table(rr)
 ```
 
 ```
-#          task            learner     resampling iteration prediction
-# 1: &lt;TaskRegr&gt; &lt;LearnerRegrRpart&gt; &lt;ResamplingCV&gt;         1     &lt;list&gt;
-# 2: &lt;TaskRegr&gt; &lt;LearnerRegrRpart&gt; &lt;ResamplingCV&gt;         2     &lt;list&gt;
-# 3: &lt;TaskRegr&gt; &lt;LearnerRegrRpart&gt; &lt;ResamplingCV&gt;         3     &lt;list&gt;
+#              task               learner     resampling iteration prediction
+#  1: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         1     &lt;list&gt;
+#  2: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         2     &lt;list&gt;
+#  3: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         3     &lt;list&gt;
+#  4: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         4     &lt;list&gt;
+#  5: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         5     &lt;list&gt;
+#  6: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         6     &lt;list&gt;
+#  7: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         7     &lt;list&gt;
+#  8: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         8     &lt;list&gt;
+#  9: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         9     &lt;list&gt;
+# 10: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;        10     &lt;list&gt;
+#                                    uhash
+#  1: fabef040-2b9a-4a49-9303-17464280c46b
+#  2: fabef040-2b9a-4a49-9303-17464280c46b
+#  3: fabef040-2b9a-4a49-9303-17464280c46b
+#  4: fabef040-2b9a-4a49-9303-17464280c46b
+#  5: fabef040-2b9a-4a49-9303-17464280c46b
+#  6: fabef040-2b9a-4a49-9303-17464280c46b
+#  7: fabef040-2b9a-4a49-9303-17464280c46b
+#  8: fabef040-2b9a-4a49-9303-17464280c46b
+#  9: fabef040-2b9a-4a49-9303-17464280c46b
+# 10: fabef040-2b9a-4a49-9303-17464280c46b
 ```
 
 ---
 
 # Internal Data Structure
 
-#### Combining R6 and data.table
+#### Combining `R6` and `data.table`
 * Not the objects are stored, but pointers to them
 
 * Inexpensive to work on:
@@ -858,45 +926,82 @@ as.data.table(rr)
 future::plan("multicore")
 benchmark(grid)
 ```
-* runs each resampling iteration as a job&lt;br/&gt;
+
+* runs each resampling iteration as a job
+
 * also allows nested resampling (although not needed here)
+
+---
+
+# Control of Execution
 
 <i class="fas  fa-arrow-right "></i>  Encapsulation
 
 
 ```r
-ctrl = mlr_control(encapsulate_train = "callr")
-benchmark(grid, ctrl = ctrl)
+learner$encapsulate = c(train = "callr", predict = "callr")
 ```
+
 * Spawns a separate R process to train the learner
+
 * Learner may segfault without tearing down the master session
+
 * Logs are captured
+
 * Possibility to have a fallback learner to create predictions
 
 ---
 
 # Out-of-memory Data
 
-* Task stores data in a `DataBackend`:
-    * `DataBackendDataTable`: Default backend for dense data (in-memory)
-    * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
-    * `mlr3db::DataBackendDplyr`: Backend for many DBMS (out-of-memory)
-    * `DataBackendCbind`: Combine backends thorugh `task$cbind(backend)` (virtual)
-    * `DataBackendRbind`: Combine backends thorugh `task$rbind(backend)` (virtual)
+Task stores data in a `DataBackend`:
+  * `DataBackendDataTable`: Default backend for dense data (in-memory)
+  
+  * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
+  
+  * `mlr3db::DataBackendDplyr`: Backend for many DBMS (out-of-memory)
+  
+  * `DataBackendCbind`: Combine backends thorugh `task$cbind(backend)` (virtual)
+  
+  * `DataBackendRbind`: Combine backends thorugh `task$rbind(backend)` (virtual)
     
-* Backends are immutable
-    * Filtering rows or selecting columns just modifies the "view" on the data
-    * Multiple tasks can share the same backend
+---
+
+# Out-of-memory Data
+
+Backends are immutable
+  * Filtering rows or selecting columns just modifies the "view" on the data
+  * Multiple tasks can share the same backend
     
-* Example: Interface a read-only MariaDB with `DataBackendDplyr`, add generated features via `DataBackendDataTable`
+Example: 
+1. Interface a read-only MariaDB with `DataBackendDplyr`
+1. Add generated features via `DataBackendDataTable`
 
 ---
 
-# Current state
+# Resources
+
+.pull-left[
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;
+]
+
+.pull-right[
+
+[CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
+
+[Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
+
+[mlr3book](https://mlr3book.mlr-org.com)
+
+Want to contribute?  
+[mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+
+]
+
+---
 
 https://github.com/mlr-org/mlr3/wiki/CI-Status
 https://github.com/mlr-org/mlr3/wiki/Extension-Packages
-
 
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
@@ -947,7 +1052,24 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
     }
     deleted = true;
   });
-})();</script>
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
 
 <script>
 (function() {
