@@ -49,11 +49,6 @@ knitr::opts_chunk$set(
 lgr::get_logger("mlr3")$set_threshold("warn")
 ```
 
-```{r, comment="", results="asis", echo =FALSE}
-old.hooks = fansi::set_knit_hooks((knitr::knit_hooks))
-options(crayon.enabled = TRUE)
-```
-
 class: middle left hide-count
 
 <img src="https://raw.githubusercontent.com/mlr-org/mlr/master/man/figures/logo_navbar.png">
@@ -94,6 +89,12 @@ class: inverse, center, middle
 ---
 
 # Pipelines
+
+```{r, comment="", results="asis", echo =FALSE}
+# setup chunk only!
+old.hooks = fansi::set_knit_hooks((knitr::knit_hooks))
+options(crayon.enabled = TRUE)
+```
 
 So far *mlr3* just modeled this part:
 <div style="
