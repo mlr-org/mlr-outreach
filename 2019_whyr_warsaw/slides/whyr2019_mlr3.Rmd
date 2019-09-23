@@ -588,7 +588,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 .pull-left[
 `r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
 
-```{r at_benchmark, eval = FALSE}
+```{r at_benchmark, eval = TRUE}
 design = benchmark_grid(
   tasks = tsk("spam"), 
   learners = list(
@@ -602,7 +602,7 @@ bmr = benchmark(design)
 
 `r icon::fa("info-circle")` _mlr3viz_ package contains `autoplot()` functions for some `mlr3` objects.
 
-```{r, eval = FALSE}
+```{r fig_at_benchmark, eval = TRUE, fig.keep='none'}
 library(mlr3viz)
 autoplot(bmr)
 ```
@@ -611,10 +611,7 @@ autoplot(bmr)
 ]
 
 .pull-right[
-
-```{r , fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
-library(mlr3viz)
-autoplot(bmr)
+```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
 ```
 ]
 
@@ -687,21 +684,21 @@ Like learners, *PipeOps* have hyperparameters controling their behavior.
 
 Change hyperparameter values in ...
 1. construction of *PipeOp*
-  ```{r eval = FALSE, results='hide'}
-  po("impute", method_num = "sample")
+  ```{r, results='hide'}
+  po("scale", scale = FALSE)
   ```
 2. *PipeOp* before building *Graph*
-  ```{r eval = FALSE, results='hide'}
-  impute$param_set$values$method_num = "sample"
+  ```{r, results='hide'}
+  scale$param_set$values$scale = FALSE
   ```
 3. *Graph* before building *GraphLearner*
-  ```{r eval = FALSE, results='hide'}
-  grph$pipeops$impute$param_set$values$method_num = "sample"
+  ```{r, results='hide'}
+  grph$pipeops$scale$param_set$values$scale = FALSE
   ```
 4. *GraphLearner*  
   `r icon::fa("info-circle")` Note the prefix of the *PipeOp* name!
-  ```{r eval = FALSE}
-  glrn$param_set$values$impute.method_num = "sample" #<<
+  ```{r}
+  glrn$param_set$values$scale.scale = FALSE #<<
   ```
 
 ---
@@ -820,9 +817,9 @@ To create these...
 # Branching
 
 1. Combine multiple *PipeOps* one below each other:  
-  .img70.center[![mlr3pipelines union](assets/mlr3pipelines-slide4.svg)]
+  .img60.center[![mlr3pipelines union](assets/mlr3pipelines-slide4.svg)]
 2. Replicate a *PipeOp* N times one below each other:  
-  .img70.center[![mlr3pipelines replicate](assets/mlr3pipelines-slide5.svg)]  
+  .img60.center[![mlr3pipelines replicate](assets/mlr3pipelines-slide5.svg)]  
   `r icon::fa("info-circle")` This is especially useful to build bagged learners in combination with *model averaging* (`regravg` or `classifavg`) afterwards.
   
 ---
@@ -1095,8 +1092,8 @@ extra_css = list(
       "top" = "30px",
       "position" = "absolute"
     ),
-    ".img70 img"= list(
-      "max-width"= "70%"
+    ".img60 img"= list(
+      "max-width"= "60%"
     ),
     "div.remark-slide-content>img, .center>img" = list(
       "margin" = "auto",

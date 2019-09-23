@@ -478,9 +478,9 @@ rr$score()
 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;
 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;
    resampling_id iteration prediction classif.ce
-1:            cv         1     &lt;list&gt;       0.02
-2:            cv         2     &lt;list&gt;       0.04
-3:            cv         3     &lt;list&gt;       0.08
+1:            cv         1     &lt;list&gt;       0.04
+2:            cv         2     &lt;list&gt;       0.06
+3:            cv         3     &lt;list&gt;       0.06
 ```
 
 
@@ -490,7 +490,7 @@ rr$aggregate()
 
 ```
 classif.ce 
-0.04666667 
+0.05333333 
 ```
 
 <i class="fas  fa-info-circle "></i> The default measure for classif tasks is the *classification error*.
@@ -824,7 +824,6 @@ autoplot(bmr)
 ]
 
 .pull-right[
-
 &lt;img src="whyr2019_mlr3_files/figure-html/fig_at_benchmark-1.svg" width="90%" style="display: block; margin: auto;" /&gt;
 ]
 
@@ -920,23 +919,23 @@ Change hyperparameter values in ...
 1. construction of *PipeOp*
   
   ```r
-  po("impute", method_num = "sample")
+  po("scale", scale = FALSE)
   ```
 2. *PipeOp* before building *Graph*
   
   ```r
-  impute$param_set$values$method_num = "sample"
+  scale$param_set$values$scale = FALSE
   ```
 3. *Graph* before building *GraphLearner*
   
   ```r
-  grph$pipeops$impute$param_set$values$method_num = "sample"
+  grph$pipeops$scale$param_set$values$scale = FALSE
   ```
 4. *GraphLearner*  
   <i class="fas  fa-info-circle "></i> Note the prefix of the *PipeOp* name!
   
   ```r
-  *glrn$param_set$values$impute.method_num = "sample"
+  *glrn$param_set$values$scale.scale = FALSE
   ```
 
 ---
@@ -973,8 +972,7 @@ Petal.Length  Petal.Width Sepal.Length  Sepal.Width
     3.776000     1.218667     5.840000     3.064000 
 
 $scale
-Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-   1.7829402    0.7907734    0.8058905    0.4354681 
+[1] 1
 ```
 
 ```r
@@ -1016,7 +1014,7 @@ rr$learners[[1]]$model$scale$center
 
 ```
 Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.745185     1.197037     5.837037     3.056296 
+    3.768889     1.205185     5.838519     3.044444 
 ```
 
 ```r
@@ -1025,7 +1023,7 @@ rr$learners[[10]]$model$scale$center
 
 ```
 Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-    3.748148     1.196296     5.838519     3.071852 
+    3.738519     1.177037     5.823704     3.040741 
 ```
 
 <i class="fas  fa-info-circle "></i> Remember: Transforming the data before crossvalidating skews results. Transforming the data independently for training and test leads to wrong results!
@@ -1071,12 +1069,12 @@ instance$archive()[, .(learner_id, classif.acc)]
 
 ```
                              learner_id classif.acc
-1: scale.encode.imputemean.classif.kknn   0.9466667
+1: scale.encode.imputemean.classif.kknn   0.9533333
 2: scale.encode.imputemean.classif.kknn   0.9533333
-3: scale.encode.imputemean.classif.kknn   0.9466667
+3: scale.encode.imputemean.classif.kknn   0.9533333
 4: scale.encode.imputemean.classif.kknn   0.9533333
 5: scale.encode.imputemean.classif.kknn   0.9533333
-6: scale.encode.imputemean.classif.kknn   0.9466667
+6: scale.encode.imputemean.classif.kknn   0.9533333
 ```
 
 ```r
@@ -1109,9 +1107,9 @@ To create these...
 # Branching
 
 1. Combine multiple *PipeOps* one below each other:  
-  .img70.center[![mlr3pipelines union](assets/mlr3pipelines-slide4.svg)]
+  .img60.center[![mlr3pipelines union](assets/mlr3pipelines-slide4.svg)]
 2. Replicate a *PipeOp* N times one below each other:  
-  .img70.center[![mlr3pipelines replicate](assets/mlr3pipelines-slide5.svg)]  
+  .img60.center[![mlr3pipelines replicate](assets/mlr3pipelines-slide5.svg)]  
   <i class="fas  fa-info-circle "></i> This is especially useful to build bagged learners in combination with *model averaging* (`regravg` or `classifavg`) afterwards.
   
 ---
@@ -1183,10 +1181,10 @@ instance$result$tune_x
 
 ```
 $branch.selection
-[1] "nop"
+[1] "pca"
 
 $classif.kknn.k
-[1] 2
+[1] 1
 ```
 
 ```r
@@ -1195,7 +1193,7 @@ instance$result$perf
 
 ```
 classif.acc 
-       0.96 
+       0.94 
 ```
 
 <i class="fas  fa-info-circle "></i> Tuning hyperparameters of *PipeOps* that *can* be active needs dependent parameters. 
@@ -1244,9 +1242,9 @@ bmr$aggregate()[, -(1:3)]
 ```
 
 ```
-                                 learner_id resampling_id iters regr.mse
-1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10 37.42377
-2:                                  regr.lm            cv    10 12.01355
+                                 learner_id resampling_id iters  regr.mse
+1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10 18.453188
+2:                                  regr.lm            cv    10  9.480022
 ```
 
 ---
