@@ -21,6 +21,9 @@ CHAR_WIDTH = 100
 FIG_WIDTH = 9
 FIG_HEIGHT = 4
 
+# remotes::install_github("mlr-org/mlr3tuning@19a9a6bf15f984f0e3efdeb162b80fe189e18621")
+# remotes::install_github("mlr-org/mlr3@8bc7039fddf3f866339fdf28fc26a7977095c478")
+
 library(paradox)
 library(mlr3)
 library(mlr3learners)
