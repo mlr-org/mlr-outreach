@@ -112,7 +112,9 @@ knitr::include_graphics("assets/ml-workflow.png", dpi = 30)
 # Machine Learning in R
 
 The **good** news:
+
 - CRAN serves hundreds of packages for machine learning
+
 - Many packages for single specific ML-methods
   - `randomForest`, `ranger`
   - `e1070::svm`
