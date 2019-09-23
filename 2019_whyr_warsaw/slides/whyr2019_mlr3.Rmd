@@ -11,7 +11,6 @@ output:
       - assets/css/extra.css
       - assets/css/tachyons.min.css
     nature:
-      ratio: "16:9"
       highlightStyle: github
       highlightLines: true
       countIncrementalSlides: false
@@ -24,6 +23,7 @@ FIG_HEIGHT = 4
 
 library(paradox)
 library(mlr3)
+library(magrittr)
 options(htmltools.dir.version = FALSE, width=80)
 requireNamespace("fansi")
 requireNamespace("icon") # remotes::install_github("ropenscilabs/icon")
@@ -160,6 +160,7 @@ The **bad** news:
 - 8-10 main developers
   - even more contributors
   - 5 GSOC projects since 2015
+  
 - About 30K lines of code, 8K lines of unit tests
 
 ---
@@ -375,14 +376,11 @@ rr = resample(task, learner, resampling)
 
 # Resample
 
-```{r, eval = TRUE}
+.code75[
+```{r, eval = T}
 rr$score() 
 ```
 
-.code55[
-```{r, echo = FALSE}
-rr$score() 
-```
 ]
 
 ```{r}
@@ -423,7 +421,6 @@ library(mlr3)
 set.seed(1)
 ```
 
-.code75[
 ```{r}
 # Create learning task
 task_iris = TaskClassif$new(id = "iris", backend = iris, 
@@ -446,18 +443,19 @@ learner$train(task_iris, row_ids = train_set)
 prediction = learner$predict(task_iris, 
   row_ids = test_set)
 ```
-]
 
 ---
 
 # Example Train/Test (cont.)
 
+.code85[
 ```{r}
 prediction
 # calculate performance
 prediction$confusion
 prediction$score(msr("classif.acc"))
 ```
+]
 
 ---
 
@@ -545,13 +543,8 @@ rr = bmr$resample_result(2)
 rr$prediction()$confusion
 ```
 
----
-
-# Benchmarking (cont.)
-
 ```{r, eval = T}
 # Average feature importance
-library(magrittr)
 sapply(rr$data$learner, function(x) x$importance()) %>% 
   apply(1, mean)
 ```
@@ -616,7 +609,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 
 .pull-left[
 `r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
-.code75[
+
 ```{r at_benchmark, eval = T}
 design = benchmark_grid(
   tasks = tsk("spam"), 
@@ -631,12 +624,12 @@ bmr = benchmark(design)
 
 `r icon::fa("info-circle")` _mlr3viz_ package contains `autoplot()` functions for some `mlr3` objects.
 
-```{r, eval=FALSE}
+```{r, eval=F}
 library(mlr3viz)
 autoplot(bmr)
 ```
 
-]
+
 ]
 
 .pull-right[
@@ -659,9 +652,11 @@ class: inverse, center, middle
 
 All result objects (`resample()`, `benchmark()`, tuning, ...) share the same structure:
 
+.code75[
 ```{r}
 as.data.table(rr)
 ```
+]
 
 ---
 
@@ -739,22 +734,15 @@ Example:
 
 # Resources
 
-.pull-left[
 <iframe width="560" height="315" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-]
 
-.pull-right[
-
-[CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
-
-[Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
-
-[mlr3book](https://mlr3book.mlr-org.com)
+- [CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
+- [Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
+- [mlr3book](https://mlr3book.mlr-org.com)
 
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
 
-]
 
 ---
 
@@ -773,11 +761,12 @@ duo_accent(
   text_font_google     = google_font("Work Sans", "400", "300"),
   header_font_google   = google_font("Roboto Slab", "400"),
   code_font_google     = google_font("IBM Plex Mono", "300", "400"),
-  code_font_size = "0.85em",
+  code_font_size = "0.75em",
+  header_h1_font_size = "45px",
   title_slide_background_color = "#002733",
   link_color = "#eb1455",
   text_bold_color = "#00589a",
-  text_font_size = "30px",
+  text_font_size = "25px",
   header_color = "#002733",
   padding = "0em 2em 1em 2em"
 )
@@ -816,11 +805,14 @@ extra_css = list(
     ".code75" = list(
       "font-size" = "0.75em"
     ),
+    ".code85" = list(
+      "font-size" = "0.85em"
+    ),
     ".font25" = list(
       "font-size" = "25px"
     ),
     ".avatars" = list(
-     "width" = "150px",
+     "width" = "100px",
      "white-space" = "nowrap",
      "left" = "300px",
      "top" = "30px",

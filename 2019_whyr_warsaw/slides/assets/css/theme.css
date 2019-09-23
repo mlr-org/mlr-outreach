@@ -33,14 +33,14 @@ h1, h2, h3 {
 }
 .remark-slide-content {
   background-color: #FFFFFF;
-  font-size: 30px;
+  font-size: 25px;
   
   
   
   padding: 0em 2em 1em 2em;
 }
 .remark-slide-content h1 {
-    font-size: 55px;
+    font-size: 45px;
 }
 .remark-slide-content h2 {
     font-size: 45px;
@@ -52,7 +52,7 @@ h1, h2, h3 {
   font-family: IBM Plex Mono, 'Lucida Console', Monaco, monospace;
 }
 .remark-code {
-  font-size: 0.85em;
+  font-size: 0.75em;
 }
 .remark-inline-code {
   font-size: 1em;

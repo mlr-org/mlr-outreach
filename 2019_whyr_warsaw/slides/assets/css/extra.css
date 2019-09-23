@@ -16,176 +16,6 @@
 }
 .inverse h1 {
   font-size: 100px;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-.code-small {
-  font-size: 0.55em;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-.code-small {
-  font-size: 0.55em;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-.code55 {
-  font-size: 0.55em;
-}
-.code75 {
-  font-size: 0.75em;
-}
-.font25 {
-  font-size: 25px;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
-  color: white;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-.code55 {
-  font-size: 0.55em;
-}
-.code75 {
-  font-size: 0.75em;
-}
-.font25 {
-  font-size: 25px;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
   color: white;
 }
 .remark-slide-content h1 {
@@ -208,93 +38,11 @@ pre {
   font-size: 25px;
 }
 .avatars {
-  right: 100px;
-  font-size: 10px;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
-  color: white;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-.code55 {
-  font-size: 0.55em;
-}
-.code75 {
-  font-size: 0.75em;
-}
-.font25 {
-  font-size: 25px;
-}
-.avatars {
-  width: 150px;
-}
-
-
-/* Extra CSS */
-.pkg {
-  color: #53804d;
-  font-weight: 300;
-  font-size: 95%;
-  font-family: IBM Plex Mono;
-  padding : 1px 4px;
-  background-color: #eff4ef;
-  border-radius: 4px;
-  border: 1px solid #82c878;
-}
-.hide-count .remark-slide-number {
-  display: none;
-}
-.inverse h1 {
-  font-size: 100px;
-  color: white;
-}
-.remark-slide-content h1 {
-  margin-top: 10px;
-}
-pre {
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  white-space: pre-wrap  /* Since CSS 2.1 */;
-  word-wrap: break-word  /* Internet Explorer 5.5+ */;
-}
-.code55 {
-  font-size: 0.55em;
-}
-.code75 {
-  font-size: 0.75em;
-}
-.font25 {
-  font-size: 25px;
-}
-.avatars {
-  width: 150px;
+  width: 100px;
   white-space: nowrap;
+  left: 300px;
+  top: 30px;
+  position: absolute;
 }
 
 
@@ -336,7 +84,151 @@ pre {
   font-size: 25px;
 }
 .avatars {
-  width: 150px;
+  width: 100px;
+  white-space: nowrap;
+  left: 300px;
+  top: 30px;
+  position: absolute;
+}
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
+}
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+  color: white;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code55 {
+  font-size: 0.55em;
+}
+.code75 {
+  font-size: 0.75em;
+}
+.font25 {
+  font-size: 25px;
+}
+.avatars {
+  width: 100px;
+  white-space: nowrap;
+  left: 300px;
+  top: 30px;
+  position: absolute;
+}
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
+}
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+  color: white;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code55 {
+  font-size: 0.55em;
+}
+.code75 {
+  font-size: 0.75em;
+}
+.code85 {
+  font-size: 0.85em;
+}
+.font25 {
+  font-size: 25px;
+}
+.avatars {
+  width: 100px;
+  white-space: nowrap;
+  left: 300px;
+  top: 30px;
+  position: absolute;
+}
+
+
+/* Extra CSS */
+.pkg {
+  color: #53804d;
+  font-weight: 300;
+  font-size: 95%;
+  font-family: IBM Plex Mono;
+  padding : 1px 4px;
+  background-color: #eff4ef;
+  border-radius: 4px;
+  border: 1px solid #82c878;
+}
+.hide-count .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+  color: white;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+}
+.code55 {
+  font-size: 0.55em;
+}
+.code75 {
+  font-size: 0.75em;
+}
+.code85 {
+  font-size: 0.85em;
+}
+.font25 {
+  font-size: 25px;
+}
+.avatars {
+  width: 100px;
   white-space: nowrap;
   left: 300px;
   top: 30px;

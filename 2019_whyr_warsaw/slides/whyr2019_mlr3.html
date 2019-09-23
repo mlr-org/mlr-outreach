@@ -124,6 +124,7 @@ The **bad** news:
 - 8-10 main developers
   - even more contributors
   - 5 GSOC projects since 2015
+  
 - About 30K lines of code, 8K lines of unit tests
 
 ---
@@ -473,6 +474,7 @@ rr = resample(task, learner, resampling)
 
 # Resample
 
+.code75[
 
 ```r
 rr$score() 
@@ -484,23 +486,11 @@ rr$score()
 # 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
 # 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
 #    prediction classif.ce
-# 1:     &lt;list&gt;       0.08
+# 1:     &lt;list&gt;       0.06
 # 2:     &lt;list&gt;       0.04
 # 3:     &lt;list&gt;       0.06
 ```
 
-.code55[
-
-```
-#             task task_id               learner    learner_id     resampling resampling_id iteration
-# 1: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         1
-# 2: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         2
-# 3: &lt;TaskClassif&gt;    iris &lt;LearnerClassifRpart&gt; classif.rpart &lt;ResamplingCV&gt;            cv         3
-#    prediction classif.ce
-# 1:     &lt;list&gt;       0.08
-# 2:     &lt;list&gt;       0.04
-# 3:     &lt;list&gt;       0.06
-```
 ]
 
 
@@ -510,7 +500,7 @@ rr$aggregate()
 
 ```
 # classif.ce 
-#       0.06
+# 0.05333333
 ```
 
 <i class="fas  fa-info-circle "></i> The default measure for classif tasks is the *classification error*.
@@ -543,7 +533,6 @@ Dictionaries store often used objects.
 
 
 
-.code75[
 
 ```r
 # Create learning task
@@ -567,12 +556,12 @@ learner$train(task_iris, row_ids = train_set)
 prediction = learner$predict(task_iris, 
   row_ids = test_set)
 ```
-]
 
 ---
 
 # Example Train/Test (cont.)
 
+.code85[
 
 ```r
 prediction
@@ -611,6 +600,7 @@ prediction$score(msr("classif.acc"))
 # classif.acc 
 #   0.9666667
 ```
+]
 
 ---
 
@@ -743,14 +733,9 @@ rr$prediction()$confusion
 #   virginica       0          5        45
 ```
 
----
-
-# Benchmarking (cont.)
-
 
 ```r
 # Average feature importance
-library(magrittr)
 sapply(rr$data$learner, function(x) x$importance()) %&gt;% 
   apply(1, mean)
 ```
@@ -820,7 +805,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 # &lt;ResampleResult&gt; of 1 iterations
 # * Task: spam
 # * Learner: classif.ranger.tuned
-# * Performance: 0.055 [classif.ce]
+# * Performance: 0.057 [classif.ce]
 # * Warnings: 0 in 0 iterations
 # * Errors: 0 in 0 iterations
 ```
@@ -831,7 +816,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 
 .pull-left[
 <i class="fas  fa-arrow-right "></i> Compare tuned learner vs. default learner:
-.code75[
+
 
 ```r
 design = benchmark_grid(
@@ -853,7 +838,7 @@ library(mlr3viz)
 autoplot(bmr)
 ```
 
-]
+
 ]
 
 .pull-right[
@@ -873,6 +858,7 @@ class: inverse, center, middle
 
 All result objects (`resample()`, `benchmark()`, tuning, ...) share the same structure:
 
+.code75[
 
 ```r
 as.data.table(rr)
@@ -891,17 +877,18 @@ as.data.table(rr)
 #  9: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;         9     &lt;list&gt;
 # 10: &lt;TaskClassif&gt; &lt;LearnerClassifRpart&gt; &lt;ResamplingCV&gt;        10     &lt;list&gt;
 #                                    uhash
-#  1: fabef040-2b9a-4a49-9303-17464280c46b
-#  2: fabef040-2b9a-4a49-9303-17464280c46b
-#  3: fabef040-2b9a-4a49-9303-17464280c46b
-#  4: fabef040-2b9a-4a49-9303-17464280c46b
-#  5: fabef040-2b9a-4a49-9303-17464280c46b
-#  6: fabef040-2b9a-4a49-9303-17464280c46b
-#  7: fabef040-2b9a-4a49-9303-17464280c46b
-#  8: fabef040-2b9a-4a49-9303-17464280c46b
-#  9: fabef040-2b9a-4a49-9303-17464280c46b
-# 10: fabef040-2b9a-4a49-9303-17464280c46b
+#  1: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  2: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  3: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  4: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  5: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  6: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  7: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  8: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+#  9: ae3a759f-bccf-4df6-b5e6-d11a45b17295
+# 10: ae3a759f-bccf-4df6-b5e6-d11a45b17295
 ```
+]
 
 ---
 
@@ -981,22 +968,15 @@ Example:
 
 # Resources
 
-.pull-left[
 &lt;iframe width="560" height="315" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;
-]
 
-.pull-right[
-
-[CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
-
-[Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
-
-[mlr3book](https://mlr3book.mlr-org.com)
+- [CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
+- [Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
+- [mlr3book](https://mlr3book.mlr-org.com)
 
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
 
-]
 
 ---
 
@@ -1009,7 +989,6 @@ Want to contribute?
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
 <script>var slideshow = remark.create({
-"ratio": "16:9",
 "highlightStyle": "github",
 "highlightLines": true,
 "countIncrementalSlides": false
