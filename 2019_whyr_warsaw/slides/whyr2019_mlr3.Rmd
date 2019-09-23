@@ -754,6 +754,7 @@ https://github.com/mlr-org/mlr3/wiki/Extension-Packages
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
 
+
 ```{r xaringanthemer, include=FALSE, eval=FALSE}
 library(xaringanthemer) # remotes::install_github("gadenbuie/xaringanthemer")
 duo_accent(
@@ -810,8 +811,8 @@ extra_css = list(
     ".code85" = list(
       "font-size" = "0.85em"
     ),
-    ".font25" = list(
-      "font-size" = "25px"
+    ".font20" = list(
+      "font-size" = "20px"
     ),
     ".avatars" = list(
      "width" = "100px",
@@ -819,6 +820,9 @@ extra_css = list(
      "left" = "300px",
      "top" = "30px",
      "position" = "absolute"
+    ),
+    ".img70 img"= list(
+      "max-width"= "70%"
     )
 )
 write_extra_css(css = extra_css, outfile = here::here("2019_whyr_warsaw/slides/assets/css/extra.css"))
