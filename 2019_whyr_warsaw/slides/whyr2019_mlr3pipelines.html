@@ -15,6 +15,10 @@
 
 
 
+&lt;STYLE type='text/css' scoped&gt;
+PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};
+&lt;/STYLE&gt;
+
 class: middle left hide-count
 
 &lt;img src="https://raw.githubusercontent.com/mlr-org/mlr/master/man/figures/logo_navbar.png"&gt;
@@ -77,6 +81,7 @@ We can put preprocessing *PipeOps* in front of a Learner
 
 ![pipeline example](assets/mlr3pipelines-slide12.svg)
 
+.code85[
 
 ```r
 library(mlr3pipelines)
@@ -92,6 +97,7 @@ mlr_pipeops
 #   mutate, nop, pca, quantilebin, regravg, removeconstants, scale, scalemaxabs,
 #   scalerange, select, smote, spatialsign, subsample, unbranch, yeojohnson
 ```
+]
 
 ---
 
@@ -105,7 +111,7 @@ scale = po("scale")
 encode = po("encode")
 impute = po("imputemean")
 learner = po("learner", lrn("classif.kknn", scale = FALSE))
-grph = scale %&gt;&gt;% encode %&gt;&gt;% impute %&gt;&gt;% learner
+*grph = scale %&gt;&gt;% encode %&gt;&gt;% impute %&gt;&gt;% learner
 (glrn = GraphLearner$new(grph))
 ```
 
@@ -232,7 +238,7 @@ rr$learners[[1]]$model$scale$center
 
 ```
 # Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-#     3.691852     1.171852     5.816296     3.063704
+#     3.730370     1.178519     5.807407     3.054074
 ```
 
 ```r
@@ -241,7 +247,7 @@ rr$learners[[10]]$model$scale$center
 
 ```
 # Petal.Length  Petal.Width Sepal.Length  Sepal.Width 
-#     3.728148     1.190370     5.827407     3.059259
+#     3.754815     1.204444     5.867407     3.065926
 ```
 ]
 
@@ -251,8 +257,7 @@ rr$learners[[10]]$model$scale$center
 
 # Tune Parameters of PipeOps
 
-.code75[
-.pull-left[
+.pull-left.code75[
 We access the *PipeOp* hyperparameter through the parameter with its prefix in the *GraphLearner*.
 
 
@@ -279,23 +284,22 @@ instance = TuningInstance$new(
 ```
 ]
 
-.pull-right[
+.pull-right.code55[
 
 ```r
 tt = tnr("grid_search")
 tt$tune(instance)
-instance$archive()[, .(scale.scale, 
-  classif.kknn.k, classif.acc)]
+instance$archive()[, .(learner_id, classif.acc)]
 ```
 
 ```
-#    scale.scale classif.kknn.k classif.acc
-# 1:       FALSE              1   0.9533333
-# 2:       FALSE              3   0.9533333
-# 3:        TRUE              2   0.9466667
-# 4:        TRUE              3   0.9466667
-# 5:       FALSE              2   0.9533333
-# 6:        TRUE              1   0.9466667
+#                              learner_id classif.acc
+# 1: scale.encode.imputemean.classif.kknn   0.9333333
+# 2: scale.encode.imputemean.classif.kknn   0.9333333
+# 3: scale.encode.imputemean.classif.kknn   0.9600000
+# 4: scale.encode.imputemean.classif.kknn   0.9600000
+# 5: scale.encode.imputemean.classif.kknn   0.9600000
+# 6: scale.encode.imputemean.classif.kknn   0.9333333
 ```
 
 ```r
@@ -308,7 +312,7 @@ instance$result
 # [1] FALSE
 # 
 # $tune_x$classif.kknn.k
-# [1] 1
+# [1] 2
 # 
 # 
 # $params
@@ -322,14 +326,13 @@ instance$result
 # [1] FALSE
 # 
 # $params$classif.kknn.k
-# [1] 1
+# [1] 2
 # 
 # 
 # $perf
 # classif.acc 
-#   0.9533333
+#        0.96
 ```
-]
 ]
 
 ---
@@ -413,7 +416,7 @@ instance = TuningInstance$new(
 ```
 ]
 
-.pull-right.code75[
+.pull-right.code55[
 
 ```r
 tt = tnr("grid_search")
@@ -424,15 +427,15 @@ instance$result
 ```
 # $tune_x
 # $tune_x$branch.selection
-# [1] "nop"
+# [1] "pca"
 # 
 # $tune_x$classif.kknn.k
-# [1] 1
+# [1] 3
 # 
 # 
 # $params
 # $params$branch.selection
-# [1] "nop"
+# [1] "pca"
 # 
 # $params$pca.rank.
 # [1] 2
@@ -444,12 +447,12 @@ instance$result
 # [1] TRUE
 # 
 # $params$classif.kknn.k
-# [1] 1
+# [1] 3
 # 
 # 
 # $perf
 # classif.acc 
-#   0.9333333
+#        0.96
 ```
 
 <i class="fas  fa-info-circle "></i> Tuning hyperparameters of *PipeOps* that *can* be active needs dependent parameters. 
@@ -502,8 +505,8 @@ bmr$aggregate()[, -(1:3)]
 
 ```
 #                                  learner_id resampling_id iters regr.mse
-# 1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10  9.39570
-# 2:                                  regr.lm            cv    10 10.92413
+# 1: copy.regr.rpart.nop.featureunion.regr.lm            cv    10 15.50814
+# 2:                                  regr.lm            cv    10 12.97293
 ```
 ]
 
@@ -525,6 +528,7 @@ bmr$aggregate()[, -(1:3)]
 
 # Out-of-memory Data
 
+.font20[
 * Task stores data in a `DataBackend`:
     * `DataBackendDataTable`: Default backend for dense data (in-memory)
     * `DataBackendMatrix`: Backend for sparse numerical data (in-memory)
@@ -537,14 +541,17 @@ bmr$aggregate()[, -(1:3)]
     * Multiple tasks can share the same backend
     
 * Example: Interface a read-only MariaDB with `DataBackendDplyr`, add generated features via `DataBackendDataTable`
+]
 
 ---
 
-# Current state
+# Resources
 
-https://github.com/mlr-org/mlr3/wiki/CI-Status
-https://github.com/mlr-org/mlr3/wiki/Extension-Packages
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/gEW5RxkbQuQ?controls=0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;&gt;
 
+- [CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
+- [Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
+- [mlr3book](https://mlr3book.mlr-org.com)
 
 Want to contribute?  
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
@@ -552,7 +559,6 @@ Want to contribute?
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
 <script>var slideshow = remark.create({
-"ratio": "16:9",
 "highlightStyle": "github",
 "highlightLines": true,
 "countIncrementalSlides": false
