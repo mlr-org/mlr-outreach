@@ -1,0 +1,66 @@
+
+
+/* Extra CSS */
+.hide-count .remark-slide-number, .inverse .remark-slide-number {
+  display: none;
+}
+.inverse h1 {
+  font-size: 100px;
+  color: white;
+}
+.remark-slide-content h1 {
+  margin-top: 10px;
+}
+.code85 {
+  font-size: 0.85em;
+}
+.font20 {
+  font-size: 20px;
+}
+.avatars {
+  width: 100px;
+  white-space: nowrap;
+  left: 300px;
+  top: 30px;
+  position: absolute;
+}
+.img70 img {
+  max-width: 70%;
+}
+div.remark-slide-content>img, .center>img {
+  margin: auto;
+  display: block;
+}
+code:not(.r) .remark-code-line-highlighted:not(.r) {
+  background-color: inherit;
+}
+code:not(.r) .remark-code-line {
+  color: #448e08;
+}
+.pull-left {
+  float: left;
+  width: 50%;
+  margin-left: -20px;
+  padding-right: 27px;
+}
+.pull-right {
+  float: right;
+  width: 50%;
+  margin-right: -20px;
+}
+pre {
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  white-space: pre-wrap  /* Since CSS 2.1 */;
+  word-wrap: break-word  /* Internet Explorer 5.5+ */;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+li pre {
+  margin: 0;
+}
+li p {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}

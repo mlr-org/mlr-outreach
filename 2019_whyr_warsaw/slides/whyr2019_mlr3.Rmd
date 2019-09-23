@@ -1,15 +1,14 @@
 ---
-title: "foo"
+title: "Reproducible machine learning workflows"
 subtitle: ""
-author: ""
+author: "Jakob Richter"
 output:
   xaringan::moon_reader:
     lib_dir: libs
     seal: false
     css: 
-      - assets/css/theme.css
-      - assets/css/extra.css
-      - assets/css/tachyons.min.css
+      - libs/css/theme.css
+      - libs/css/extra.css
     nature:
       highlightStyle: github
       highlightLines: true
@@ -17,7 +16,7 @@ output:
 ---
 
 ```{r, include = FALSE}
-CHAR_WIDTH = 100
+CHAR_WIDTH = 82
 FIG_WIDTH = 9
 FIG_HEIGHT = 4
 
@@ -27,9 +26,9 @@ FIG_HEIGHT = 4
 library(paradox)
 library(mlr3)
 library(magrittr)
-options(htmltools.dir.version = FALSE, width=80)
+options(htmltools.dir.version = FALSE, width=CHAR_WIDTH)
 requireNamespace("fansi")
-requireNamespace("icon") # remotes::install_github("ropenscilabs/icon")
+# remotes::install_github("ropenscilabs/icon")
 options(
   crayon.enabled = TRUE,
   datatable.print.class = FALSE,
@@ -37,10 +36,9 @@ options(
   width = CHAR_WIDTH
 )
 knitr::opts_chunk$set(
-  #comment = NA,
-  comment = "#",
-  tidy.opts=list(width.cutoff=80),
-  eval = T,
+  comment = NA,
+  tidy.opts=list(width.cutoff=CHAR_WIDTH),
+  eval = TRUE,
   width = CHAR_WIDTH,
   fig.height = FIG_HEIGHT,
   fig.width = FIG_WIDTH,
@@ -170,51 +168,39 @@ The **bad** news:
 
 ---
 
-# What (old) mlr became (1/2)
+# What (old) mlr became
 
 Meta framework for everything machine learning (visualization, tuning, feature selection, preprocessing, bagging, ensembles, ...)
 
 * Monolithic package
-
 * Interfaces > 150 learners  
-
   `r icon::fa("arrow-right")` Dependencies (direct / recursive): 119 / 1436  
   `r icon::fa("arrow-right")` Unit tests take > 2h  
   `r icon::fa("arrow-right")` Package developers changed their API and (unknowingly) broke mlr  
-  
 * High barrier for new contributors
 
----
-
-# What (old) mlr became (2/2)
-
-Meta framework for everything machine learning (visualization, tuning, feature selection, preprocessing, bagging, ensembles, ...)
-
 * S3 reaches its limitations in larger software projects
-
 * Many specialized and "hard to find" functions `getBMRAggrPerformances()`
-
 * Only works on in-memory data
-
 * No nested parallelization
 
 ---
 
 # mlr3
 
-Overcome limitations of S3 with the help of **R6**
-  * Truly object-oriented (OO): data and methods together
-  * Inheritance
-  * Reference semantics
+Overcome limitations of S3 with the help of **R6**  
+* Truly object-oriented (OO): data and methods together
+* Inheritance
+* Reference semantics
   
-Embrace **data.table**, both for arguments and for internal data structures
-  * Fast operations for tabular data
-  * Better support for list columns to arrange complex objects in a tabular structure
-  * Reference semantics
+Embrace **data.table**, both for arguments and for internal data structures  
+* Fast operations for tabular data
+* Better support for list columns to arrange complex objects in a tabular structure
+* Reference semantics
   
-Be **light on dependencies**. Direct and recursive dependencies:
-  * `R6`, `data.table`, `Metrics`, `lgr`
-  * Some self-maintained packages (`backports`, `checkmate`, ...)
+Be **light on dependencies**. Direct and recursive dependencies:  
+* `R6`, `data.table`, `Metrics`, `lgr`
+* Some self-maintained packages (`backports`, `checkmate`, ...)
 
 ---
 
@@ -269,15 +255,11 @@ task = mlr_tasks$get("iris")
 
 `r icon::fa("arrow-right")` Retrieve a predefined learner from the learner dictionary
 
-```{r, out.width=CHAR_WIDTH}
+```{r}
 mlr_learners
 ```
 
 `r icon::fa("info-circle")` More learners are available after loading `mlr3learners`.
-
----
-
-# Learner
 
 ```{r}
 learner = lrn("classif.rpart")
@@ -309,12 +291,7 @@ learner$train(task, row_ids = seq(1, to = 150, by = 2))
 
 `r icon::fa("info-circle")` This changes the learner in-place; the model is now stored inside the learner.
 
----
-
-# Learner
-
 `r icon::fa("arrow-right")` Accessing the learner model
-
 ```{r}
 learner$model
 ```
@@ -365,6 +342,11 @@ mlr_measures
 p$score(measure)
 ```
 
+Also for multiple measures:
+```{r}
+p$score(list(measure, msr("time_train")))
+```
+
 ---
 
 # Resample
@@ -381,12 +363,10 @@ rr = resample(task, learner, resampling)
 
 # Resample
 
-.code75[
-```{r, eval = T}
+
+```{r}
 rr$score() 
 ```
-
-]
 
 ```{r}
 rr$aggregate() 
@@ -445,22 +425,19 @@ test_set = setdiff(seq_len(task_iris$nrow), train_set)
 learner$train(task_iris, row_ids = train_set)
 
 # Predict data
-prediction = learner$predict(task_iris, 
-  row_ids = test_set)
+prediction = learner$predict(task_iris, row_ids = test_set)
 ```
 
 ---
 
 # Example Train/Test (cont.)
 
-.code85[
 ```{r}
 prediction
 # calculate performance
 prediction$confusion
 prediction$score(msr("classif.acc"))
 ```
-]
 
 ---
 
@@ -516,7 +493,7 @@ design
 
 `r icon::fa("arrow-right")` Execute `benchmark()` on the defined design
 
-```{r benchmark1, eval = T}
+```{r benchmark1}
 bmr = benchmark(design, store_models = TRUE)
 bmr
 ```
@@ -527,7 +504,7 @@ bmr
 
 `r icon::fa("arrow-right")` Calculate aggregated performance measure
 
-```{r, eval = T}
+```{r}
 aggr = bmr$aggregate(msr("classif.acc"))
 aggr[, 3:7]
 ```
@@ -538,7 +515,7 @@ aggr[, 3:7]
 
 `r icon::fa("arrow-right")` Retrieve objects from the `BenchmarkResult`:
 
-```{r, eval = T}
+```{r}
 # ResampleResult from 2nd configuration in the design 
 # (rpart on iris)
 
@@ -548,7 +525,7 @@ rr = bmr$resample_result(2)
 rr$prediction()$confusion
 ```
 
-```{r, eval = T}
+```{r}
 # Average feature importance
 sapply(rr$data$learner, function(x) x$importance()) %>% 
   apply(1, mean)
@@ -570,10 +547,13 @@ class: inverse, center, middle
 
 * In process
   - _Bayesian Optimization_
-  - _iterated F-racing_
+  - _Iterated F-racing_
   - _EAs_
 
-* Budget via class `Terminator`: iterations, performance, runtime, real time
+* Budget via class `Terminator`
+  - iterations
+  - performance threashold
+  - model runtime and wallclock time
 
 * Nested resampling via class `AutoTuner`
 
@@ -581,7 +561,7 @@ class: inverse, center, middle
 
 # Tuning
 
-```{r at_resample, eval = T}
+```{r at_resample}
 library(mlr3learners)
 library(mlr3tuning)
 
@@ -598,13 +578,6 @@ at = AutoTuner$new(
   terminator = term("evals", n_evals = 2), 
   tuner = tnr("random_search")
 )
-```
-
----
-
-# Tuning
-
-```{r, eval = T}
 resample(tsk("spam"), learner = at, rsmp("holdout"))
 ```
 
@@ -615,7 +588,7 @@ resample(tsk("spam"), learner = at, rsmp("holdout"))
 .pull-left[
 `r icon::fa("arrow-right")` Compare tuned learner vs. default learner:
 
-```{r at_benchmark, eval = T}
+```{r at_benchmark, eval = FALSE}
 design = benchmark_grid(
   tasks = tsk("spam"), 
   learners = list(
@@ -629,7 +602,7 @@ bmr = benchmark(design)
 
 `r icon::fa("info-circle")` _mlr3viz_ package contains `autoplot()` functions for some `mlr3` objects.
 
-```{r, eval=F}
+```{r, eval = FALSE}
 library(mlr3viz)
 autoplot(bmr)
 ```
@@ -639,11 +612,342 @@ autoplot(bmr)
 
 .pull-right[
 
-```{r eval = T, fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
+```{r , fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
 library(mlr3viz)
 autoplot(bmr)
 ```
 ]
+
+
+---
+class: inverse, center, middle
+
+# mlr3pipelines
+
+---
+
+# Pipelines
+
+```{r, comment="", results="asis", echo =FALSE}
+# setup chunk only!
+old.hooks = fansi::set_knit_hooks((knitr::knit_hooks))
+options(crayon.enabled = TRUE)
+```
+
+So far *mlr3* just modeled this part:
+<div style="
+    border: solid #ff0000 10px;
+    width: 189px;
+    height: 75px;
+    position: fixed;
+    left: 324px;
+    top: 416px;"></div>
+```{r fig_pipelines, echo = FALSE, out.width="80%"}
+```
+
+Step 1: Use pipelines for preprocessing (feature extraction/selection, missing data imputation etc.).  
+Step 2: Use pipelines for ensemble models.
+
+---
+
+# Preprocessing Pipelines
+
+We can put preprocessing *PipeOps* in front of a Learner
+
+.center[
+![pipeline example](assets/mlr3pipelines-slide12.svg)
+]
+
+```{r}
+library(mlr3pipelines)
+
+mlr_pipeops
+```
+
+---
+
+# Preprocessing Pipelines
+
+Use **`%>>%`** to connect *PipeOps*:
+
+```{r, warning=FALSE}
+scale = po("scale") 
+encode = po("encode")
+impute = po("imputemean")
+learner = po("learner", lrn("classif.kknn", scale = FALSE))
+grph = scale %>>% encode %>>% impute %>>% learner #<<
+(glrn = GraphLearner$new(grph))
+```
+
+---
+
+# Access Hyperparameters of PipeOps
+
+Like learners, *PipeOps* have hyperparameters controling their behavior.
+
+Change hyperparameter values in ...
+1. construction of *PipeOp*
+  ```{r eval = FALSE, results='hide'}
+  po("impute", method_num = "sample")
+  ```
+2. *PipeOp* before building *Graph*
+  ```{r eval = FALSE, results='hide'}
+  impute$param_set$values$method_num = "sample"
+  ```
+3. *Graph* before building *GraphLearner*
+  ```{r eval = FALSE, results='hide'}
+  grph$pipeops$impute$param_set$values$method_num = "sample"
+  ```
+4. *GraphLearner*  
+  `r icon::fa("info-circle")` Note the prefix of the *PipeOp* name!
+  ```{r eval = FALSE}
+  glrn$param_set$values$impute.method_num = "sample" #<<
+  ```
+
+---
+
+# Train Graph Learner
+
+`r icon::fa("arrow-right")` Train the *GraphLearner* like every other mlr3 learner:
+
+```{r}
+tsk = tsk("iris")
+glrn$train(tsk, row_ids = seq(1, 150, by = 2))
+```
+
+Most *PipeOps* have parameters (just like a trained model), that are learned from the training data:
+
+.center[
+![pipeline parameters](assets/mlr3pipelines-slide2.svg)
+]
+---
+
+# Train Graph Learner
+
+`r icon::fa("info-circle")` The scaling factors `center` $\mu$ and `scale` $\sigma$ are learned on the *training* data, and applied to new data that passes through the *PipeOp* for *prediction*.
+
+```{r}
+glrn$model$scale[c("center",  "scale")]
+p = glrn$predict(tsk, row_ids = seq(2, 150, by = 2))
+```
+
+---
+
+# Train Graph Learner (cont.)
+
+1. `glrn$train()` passes the training data through all _PipeOps_.  
+   Each *PipeOp* transforms the data and saves the transformation parameter.
+   
+2. `glrn$predict()` passes the new data through all _PipeOps_  
+   Each *PipeOp* applies the transformation with the stored transformation parameters.  
+   This ensures, that new data is transformed exactly as the training data.
+
+.center[
+![trained graph learner](assets/mlr3pipelines-slide20.svg)
+]
+
+---
+
+# PipeOp Parameters
+
+`r icon::fa("arrow-right")` Resample the complete preprocessing pipeline:
+
+```{r}
+rr = resample(tsk, glrn, rsmp("cv"), store_models = TRUE)
+```
+
+Each model is scaled according to its training data:
+
+```{r}
+rr$learners[[1]]$model$scale$center
+rr$learners[[10]]$model$scale$center
+```
+
+`r icon::fa("info-circle")` Remember: Transforming the data before crossvalidating skews results. Transforming the data independently for training and test leads to wrong results!
+
+---
+
+# Tune Parameters of PipeOps
+
+.pull-left[
+Access *PipeOp* hyperparameter through param with its prefix in the *GraphLearner*.
+
+```{r}
+ps = ParamSet$new(list(
+  ParamLgl$new("scale.scale"), #<<
+  ParamInt$new("classif.kknn.k",
+    lower = 1, upper = 3)
+))
+```
+
+`r icon::fa("info-circle")` *Grid search* terminates automatically, hence a termination criterion is optional.
+
+```{r}
+instance = TuningInstance$new(
+  task = tsk("iris"),
+  learner = glrn,
+  resampling = rsmp("cv", folds = 3),
+  measures = msr("classif.acc"),
+  param_set = ps,
+  terminator = term("none")
+)
+```
+]
+
+.pull-right.code85[
+```{r}
+tt = tnr("grid_search")
+tt$tune(instance)
+instance$archive()[, .(learner_id, classif.acc)]
+instance$result$tune_x
+```
+]
+
+---
+
+# Advanced Pipelines
+
+Pipelines become exiting, once you can modify the path of the data using these *PipeOps*:
+
+<div style="display: block;width: 150px;height: 130px;position: absolute;background-color: #FAFAFACC; left: 200px"></div>
+![PipeOps](assets/mlr3pipelines-slide6.svg)
+
+**Branching** and **Copy** have multiple outputs, so the next *PipeOps* needs multiple inputs.
+To create these...
+
+---
+
+# Branching
+
+1. Combine multiple *PipeOps* one below each other:  
+  .img70.center[![mlr3pipelines union](assets/mlr3pipelines-slide4.svg)]
+2. Replicate a *PipeOp* N times one below each other:  
+  .img70.center[![mlr3pipelines replicate](assets/mlr3pipelines-slide5.svg)]  
+  `r icon::fa("info-circle")` This is especially useful to build bagged learners in combination with *model averaging* (`regravg` or `classifavg`) afterwards.
+  
+---
+
+# Control Branching through Parameters
+
+.pull-left[
+```{r fig_branch, fig.keep='none'}
+library(mlr3filters)
+
+pca = po("pca", rank. = 2)
+filter = po("filter", flt("variance"), 
+  filter.nfeat = 2)
+
+branch = po("branch",
+  c("pca", "filter", "nop"))
+
+union = gunion(
+  list(pca, filter, po("nop")))
+
+grph = branch %>>% 
+  union %>>% 
+  po("unbranch") %>>%
+  po("learner", lrn("classif.kknn"))
+
+plot(grph)
+```
+]
+
+.pull-right[
+```{r fig_branch, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
+```
+]
+
+---
+
+# Tune Branching
+
+.pull-left[
+```{r tune_branch}
+glrn = GraphLearner$new(grph)
+
+ps = ParamSet$new(list(
+  ParamFct$new("branch.selection",
+    levels = c("pca", "filter", "nop")),
+  ParamInt$new("classif.kknn.k",
+    lower = 1, upper = 3)
+))
+
+instance = TuningInstance$new(
+  task = tsk("iris"),
+  learner = glrn,
+  resampling = rsmp("cv", folds = 3),
+  measures = msr("classif.acc"),
+  param_set = ps,
+  terminator = term("none")
+)
+```
+]
+
+.pull-right[
+```{r tune_branch_res}
+tt = tnr("grid_search")
+tt$tune(instance)
+instance$result$tune_x
+instance$result$perf
+```
+
+`r icon::fa("info-circle")` Tuning hyperparameters of *PipeOps* that *can* be active needs dependent parameters. 
+Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
+]
+
+---
+# Build Ensemble with PipeOps
+
+.pull-left[
+Instead of branching we can *copy*, to use multiple *PipeOps* on the same data:
+
+```{r graph_copy, fig.keep='none'}
+grph = po("copy", 2) %>>% 
+  gunion(list(
+    po("learner_cv", lrn("regr.rpart")),
+    po("nop")
+  )) %>>%
+  po("featureunion") %>>%
+  po("learner", lrn("regr.lm"))
+plot(grph)
+```
+]
+
+.pull-right[
+```{r graph_copy, echo=FALSE, fig.width=0.5*FIG_WIDTH, fig.height=1.5*FIG_HEIGHT}
+```
+]
+
+---
+
+# Compare Pipe to normal Learner
+
+```{r}
+glrn = GraphLearner$new(grph)
+
+design = benchmark_grid(
+  tasks = tsk("mtcars"), 
+  learners = list(glrn, lrn("regr.lm")), 
+  resamplings = rsmp("cv"))
+
+bmr = benchmark(design = design, store_models = TRUE)
+
+bmr$aggregate()[, -(1:3)]
+```
+
+---
+
+# _PipeOps_ not covered by this tutorial
+
+* Ensembles with `subsample`
+* Feature generation with `mutate`
+* Feature manipulation with `colapply`
+* Feature selection with `select`
+* Class balancing with `classbalancing`
+* Prediction combining with `classifavg` and `regravg`
+* and more.
+
+`r icon::fa("info-circle")` Check the [mlr3book pipelines chapter](https://mlr3book.mlr-org.com/pipelines.html) for exhaustive explanations and more examples.
 
 ---
 
@@ -657,11 +961,9 @@ class: inverse, center, middle
 
 All result objects (`resample()`, `benchmark()`, tuning, ...) share the same structure:
 
-.code75[
 ```{r}
 as.data.table(rr)
 ```
-]
 
 ---
 
@@ -749,46 +1051,28 @@ Want to contribute?
 [mlr3.mlr-org.com](https://mlr3.mlr-org.com)
 
 
----
 
-https://github.com/mlr-org/mlr3/wiki/CI-Status
-https://github.com/mlr-org/mlr3/wiki/Extension-Packages
-
-Want to contribute?  
-[mlr3.mlr-org.com](https://mlr3.mlr-org.com)
-
-
-```{r xaringanthemer, include=FALSE, eval=FALSE}
+```{r xaringanthemer, include=FALSE}
 library(xaringanthemer) # remotes::install_github("gadenbuie/xaringanthemer")
 duo_accent(
-  outfile = here::here("2019_whyr_warsaw/slides/assets/css/theme.css"),
+  outfile = ("libs/css/theme.css"),
   primary_color = "#03638e", secondary_color = "#f8f8f8",
   inverse_background_color = "#23373b",
-  text_font_google     = google_font("Work Sans", "400", "300"),
-  header_font_google   = google_font("Roboto Slab", "400"),
-  code_font_google     = google_font("IBM Plex Mono", "300", "400"),
+  text_font_google     = google_font("Roboto"),
+  header_font_google   = google_font("Oswald"),
+  code_font_google     = google_font("Roboto Mono"),
   code_font_size = "0.75em",
   header_h1_font_size = "45px",
+  text_bold_color = "#000000",
   title_slide_background_color = "#002733",
   link_color = "#eb1455",
-  text_bold_color = "#00589a",
-  text_font_size = "25px",
+  text_font_size = "22px",
   header_color = "#002733",
   padding = "0em 2em 1em 2em"
 )
 
 extra_css = list(
-    ".pkg" = list(
-      "color"             = "#53804d",
-      "font-weight"       = 300,
-      "font-size"         = "95%",
-      "font-family"       = "IBM Plex Mono",
-      "padding "          = "1px 4px",
-      "background-color"  = "#eff4ef",
-      "border-radius"     = "4px",
-      "border"            = "1px solid #82c878"
-    ),
-    ".hide-count .remark-slide-number" = list(
+    ".hide-count .remark-slide-number, .inverse .remark-slide-number" = list(
       display = "none"
     ),
     ".inverse h1" = list(
@@ -798,19 +1082,6 @@ extra_css = list(
     ".remark-slide-content h1" = list(
       "margin-top" = "10px"
     ),
-    "pre" = list(
-    "white-space" = "pre-wrap  /* Since CSS 2.1 */",
-    "white-space" = "-moz-pre-wrap /* Mozilla, since 1999 */",
-    "white-space" = "-pre-wrap  /* Opera 4-6 */",
-    "white-space" = "-o-pre-wrap   /* Opera 7 */",
-    "word-wrap" = "break-word  /* Internet Explorer 5.5+ */"
-    ),
-    ".code55" = list(
-      "font-size" = "0.55em"
-    ),
-    ".code75" = list(
-      "font-size" = "0.75em"
-    ),
     ".code85" = list(
       "font-size" = "0.85em"
     ),
@@ -818,16 +1089,57 @@ extra_css = list(
       "font-size" = "20px"
     ),
     ".avatars" = list(
-     "width" = "100px",
-     "white-space" = "nowrap",
-     "left" = "300px",
-     "top" = "30px",
-     "position" = "absolute"
+      "width" = "100px",
+      "white-space" = "nowrap",
+      "left" = "300px",
+      "top" = "30px",
+      "position" = "absolute"
     ),
     ".img70 img"= list(
       "max-width"= "70%"
+    ),
+    "div.remark-slide-content>img, .center>img" = list(
+      "margin" = "auto",
+      "display" = "block"
+    ),
+    # somehow indented lines are treated as highlighted, this is a dirty bugfix
+    "code:not(.r) .remark-code-line-highlighted:not(.r)" = list(
+      "background-color" = "inherit"    
+    ),
+    "code:not(.r) .remark-code-line" = list(
+      "color" = "#448e08"
+    ),
+    ".pull-left" = list(
+      "float" = "left",
+      "width" = "50%",
+      "margin-left" = "-20px",
+      "padding-right" = "27px"
+    ),
+    
+    ".pull-right" = list(
+      "float" = "right",
+      "width" = "50%",
+      "margin-right" = "-20px"
+    ),
+    "pre" = list(
+      "white-space" = "pre-wrap  /* Since CSS 2.1 */",
+      "white-space" = "-moz-pre-wrap /* Mozilla, since 1999 */",
+      "white-space" = "-pre-wrap  /* Opera 4-6 */",
+      "white-space" = "-o-pre-wrap   /* Opera 7 */",
+      "word-wrap" = "break-word  /* Internet Explorer 5.5+ */",
+      "margin-top" = "0.5em",
+      "margin-bottom" = "0.5em"
+    ),
+    # Code in lists should use less whitespace
+    "li pre" = list(
+      "margin" = "0"
+    ),
+    "li p" = list(
+      "margin-top" = "0.2em",
+      "margin-bottom" = "0.2em"
     )
 )
-write_extra_css(css = extra_css, outfile = here::here("2019_whyr_warsaw/slides/assets/css/extra.css"))
+file.remove("libs/css/extra.css") #somehow write_extra_css appends the content
+write_extra_css(css = extra_css, outfile = "libs/css/extra.css")
 ```
 

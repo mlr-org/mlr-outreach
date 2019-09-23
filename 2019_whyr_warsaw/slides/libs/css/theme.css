@@ -16,24 +16,24 @@
  *    - remarkjs wiki: https://github.com/gnab/remark/wiki
  *
  * ------------------------------------------------------- */
-@import url(https://fonts.googleapis.com/css?family=Work+Sans:400,300);
-@import url(https://fonts.googleapis.com/css?family=Roboto+Slab:400);
-@import url(https://fonts.googleapis.com/css?family=IBM+Plex+Mono:300,400);
+@import url(https://fonts.googleapis.com/css?family=Roboto);
+@import url(https://fonts.googleapis.com/css?family=Oswald);
+@import url(https://fonts.googleapis.com/css?family=Roboto+Mono);
 
 
 body {
-  font-family: Work Sans, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
-  font-weight: 400;
+  font-family: Roboto, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
+  font-weight: ;
   color: #000000;
 }
 h1, h2, h3 {
-  font-family: Roboto Slab;
+  font-family: Oswald;
   font-weight: normal;
   color: #002733;
 }
 .remark-slide-content {
   background-color: #FFFFFF;
-  font-size: 25px;
+  font-size: 22px;
   
   
   
@@ -49,7 +49,7 @@ h1, h2, h3 {
     font-size: 35px;
 }
 .remark-code, .remark-inline-code {
-  font-family: IBM Plex Mono, 'Lucida Console', Monaco, monospace;
+  font-family: Roboto Mono, 'Lucida Console', Monaco, monospace;
 }
 .remark-code {
   font-size: 0.75em;
@@ -65,7 +65,7 @@ h1, h2, h3 {
   opacity: 1;
   font-size: 0.9em;
 }
-strong{color:#00589a;}
+strong{color:#000000;}
 a, a > code {
   color: #eb1455;
   text-decoration: none;
