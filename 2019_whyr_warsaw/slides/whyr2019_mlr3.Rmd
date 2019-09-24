@@ -1055,16 +1055,28 @@ Example:
 
 ---
 
-# Resources
+# Status of mlr3
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+.pull-left[
+- Under active development
+  - Minor API changes are possible
+  - GH versions of packages can be incompatible at short periods
+  - UX will be improved (feedback welcome!)
+- On CRAN
+  - mlr3, mlr3db, mlr3filters, mlr3learners
+- On GitHub
+  - mlr3pipelines, mlr3survival, mlr3tuning, mlr3viz, mlr3spatiotemporal
+- [More comming](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)!
+- [`r icon::fa("book")` mlr3book](https://mlr3book.mlr-org.com) covers actual state
 
-- [CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
-- [Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
-- [`r icon::fa("book")` mlr3book](https://mlr3book.mlr-org.com)
+Want to contribute?
+[`r icon::fa("github")` mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+]
 
-Want to contribute?  
-[mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+.pull-right[
+<iframe width="320" height="180" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<iframe width="320" height="180" src="https://www.youtube.com/embed/gEW5RxkbQuQ" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+]
 
 
 
