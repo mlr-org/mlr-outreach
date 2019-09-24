@@ -4,8 +4,13 @@ author: "Jakob Richter"
 date: "September 27, 2019"
 output: html_document
 ---
+```{r setup, include=FALSE}
+set.seed(1)
+if (!interactive()) {
+  lgr::get_logger("mlr3")$set_threshold("warn")
+}
+```
 
-# mlr3 Workshop
 
 ## mlr3 building blocks
 
@@ -38,13 +43,13 @@ titanic_nona_pred = titanic_pred[, !(colnames(titanic_pred) %in% na_cols), with 
 ```{r}
 # if mlr3 is not installed, run the following line:
 # remotes::install_github("mlr-org/mlr3verse")
-#library(mlr3verse)
-#FIXME
-lapply(c("~/gits/paradox/", "~/gits/mlr3misc", "~/gits/mlr3", "~/gits/mlr3learners/", "~/gits/mlr3tuning/", "~/gits/mlr3pipelines/"), devtools::load_all)
+library(mlr3verse) # loads all packages mlr3, mlr3tuning, mlr3learners, mlr3pipelines, mlr3viz etc.
 
+# Build Titanic Task
 titanic_tsk = TaskClassif$new(id = "titanic", backend = titanic, target = "Survived")
 titanic_tsk
 
+# Build Titanic Task without columsn that have NAs
 titanic_nona_tsk = TaskClassif$new(id = "titanic_nona", backend = titanic_nona, target = "Survived")
 titanic_nona_tsk
 ```
@@ -69,7 +74,7 @@ Train the previously defined learner on the `titanic_tsk` task.
 lrn$train(task = titanic_nona_tsk)
 ```
 
-The learner now stores the model:
+The learner now contains the trained model:
 ```{r}
 class(lrn$model)
 summary(lrn$model)
@@ -77,8 +82,9 @@ summary(lrn$model)
 
 ### Make Predictions
 
-Use the learner that now stores the model to predict the label on the `titanic.pred` data.
+Use the learner that now stores the model to predict the label on the `titanic_nona_pred` data.
 ```{r}
+# ?Learner
 pred = lrn$predict_newdata(task = titanic_nona_tsk, newdata = titanic_nona_pred)
 (pred_dt = as.data.table(pred))
 table(pred_dt$response)
@@ -87,7 +93,7 @@ As `titanic_nona_pred` has no labeled observations we can not calculate the perf
 
 This can only be done on the training data.
 
-Define a split for the training data:
+Define a indices for the train/test split for the training data:
 ```{r}
 n = titanic_nona_tsk$nrow
 train_inds = sample(seq_len(n), size = round(n * 0.66))
@@ -97,10 +103,15 @@ test_inds = setdiff(seq_len(n), train_inds)
 Now we can predict on data with known labels and calculate various performance measures:
 ```{r}
 lrn$predict_type
-lrn$predict_type = "prob" # change predict type to probabilities
+lrn$predict_type = "prob" # change predict type to probabilities as some measures need probabilites
 
+# train the model on training indices
 lrn$train(task = titanic_nona_tsk, row_ids = train_inds)
+
+# generate the prediction
 pred = lrn$predict(task = titanic_nona_tsk, row_ids = test_inds)
+
+# chose different measures to score the prediction
 mlr_measures
 msrs = lapply(c("classif.acc", "classif.auc", "time_train"), msr)
 pred$score(measures = msrs)
@@ -109,74 +120,233 @@ pred$score(measures = msrs)
 ## Resampling
 
 To automate the test train split we can use resample.
-First use a resampling method that generates one split like in our manual example before.
+
+Therefore we need a resampling strategy.
 ```{r}
+# show available resampling objects
+mlr_resamplings
+
+# load cross validation
 rds = rsmp("cv")
+# check how many folds
 rds$param_set$values
 ```
-Now use a 5-fold cross-validation:
+
+We want to do a 5-fold cross-validation:
 ```{r}
+# change the folds parameter of the resampling description object
 rds$param_set$values$folds = 5
+
+# execute resampling
 res = resample(task = titanic_nona_tsk, learner = lrn, resampling = rds)
+
+# calculate performance measures with previously defined measures
 res$score(msrs)
 res$aggregate(msrs)
 ```
 
 ## Benchmarking
 
-Benchmark 3 Learners on the `titanic.tsk.nona` and the `iris.task`.
-The first learner should be `classif.kknn`.
-The second learner should be `classif.kknn` as well but with another hyperparameter setting (e.g. `k = 1`).
-Hint: You need to change the id for the benchmark function!
-The third one can be chosen freely.
-Hint: Use `listLearners(titanic.tsk)` to show possible choices for the task.
+We are going to benchmark multiple learners on the titanic task.
+Learners that cannot handle missing values will be evaluated on the `titanic_nona_tsk` task.
+Learners that can handle missing values will be evaluated on the `titanic_tsk` task.
+The benchmark will use the previously defined 5-fold cross-validation.
 ```{r}
-set.seed(123)
-
 # show learners with properties (again)
 as.data.table(mlr_learners)
-# experiments with learners that can not handle NAs
+
+# experiments with learners that cannot handle NAs
 design_nona = benchmark_grid(
   tasks = titanic_nona_tsk, 
   learners = lapply(c("classif.log_reg", "classif.kknn", "classif.ranger"), lrn), 
   resamplings = rds)
+
+# experiments with learners that can handle NAs
 design_with_na = benchmark_grid(
   tasks = titanic_tsk, 
   learners = lapply(c("classif.xgboost", "classif.rpart"), lrn), 
   resamplings = rds)
+
+# simply rbind both designs
 design_complete = rbind(design_nona, design_with_na)
+
+# conduct benchmark
 res = benchmark(design = design_complete)
+
+# plot benchmark results
 mlr3viz::autoplot(res)
 ```
 
 ## Tuning
 
-We want to tune rpart decision tree
+The rpart decision tree was able to perform quite well.
+Can we improve the performance if we tune the hyperparameters?
+We will use the `AutoTuner` to construct a self-tuning rpart learner.
+This will enable us evaluate the tuning approach in a nested cross-validation.
 
 ```{r}
+library(mlr3tuning)
+
+# define learner
 lrn_rpart = lrn("classif.rpart")
+
+# check the parameters of this learner
 lrn_rpart$param_set
+
+# construct ParamSet
 par_set = ParamSet$new(params = list(
-  lrn_rpart$param_set$params$cp,
-  ParamInt$new(id = "minsplit", lower = 1, upper = 40)
+  lrn_rpart$param_set$params$cp, # discrete Parameters can simply be "reused"
+  ParamInt$new(id = "minsplit", lower = 1, upper = 40) # unconstrained parameters need boundaries, its easier to redefine them
 ))
 
+# define termination criterion for tuning
+# check available terminators
 mlr_terminators
+
+# we allow the tuning for 3 seconds for each fold of the outer cross-validation
 term_secs = term("clock_time")
 term_secs$param_set
 term_secs$param_set$values$secs = 3
 
+# list available tuners
 mlr_tuners
 tune_rs = tnr("random_search")
 
+# the tuner will now have 3 seconds to find the best param setting
+# the performance will be evaluated by 10-fold CV on the training data of the outer cross-validation
 rpart_tuned = AutoTuner$new(learner = lrn_rpart, resampling = rsmp("cv"), measures = msr("classif.acc"), tune_ps = par_set, terminator = term_secs, tuner = tune_rs)
 
+# store models to see tune results
 rsmpl_res = resample(titanic_tsk, rpart_tuned, rds, store_models = TRUE)
+# we can access the tune results of each outer fold
 rsmpl_res$learners[[1]]$model$tuning_instance$result$tune_x
-rsmpl_res$learners[[2]]$model$tuning_instance$result$tune_x
+# how many hyperparameter settings could we evaluate in 3 seconds?
+rsmpl_res$learners[[2]]$model$tuning_instance$archive()
 
-res2 = benchmark(design = benchmark_grid(titanic_tsk, rpart_tuned, rds))
-res$combine(res2)
+# convert resample result to benchmark result and store it with the others
+res$combine(as_benchmark_result(rsmpl_res))
+
+# plot the new results together with the old results
 mlr3viz::autoplot(res)
+```
+
+## mlr3 pipelines
+
+### Simple GraphLearners
+
+Obviously removing certain columns will likely result in worse prediction quality.
+We will combine the learners that can not handle missing data with a simple imputation strategy to be able to train them on the task with missing values.
+```{r}
+# construct the learners
+lrns_nomissing = lapply(c("classif.log_reg", "classif.kknn", "classif.ranger"), lrn)
+as.data.table(mlr_pipeops) # show available pipeops
+
+# we decide for sampling imputation because it works for numerics and factors.
+# in front of each learner we put the imputesample PipeOp
+lrns_sampleimp = lapply(lrns_nomissing, function(lrn) {
+  pipe = po("imputesample") %>>% po("learner", learner = lrn) 
+  GraphLearner$new(pipe)
+})
+
+# benchmark the learners with sample imputation
+design_impute = benchmark_grid(
+  tasks = titanic_tsk,
+  learners = lrns_sampleimp,
+  resamplings = rds)
+res3 = benchmark(design = design_impute)
+
+# add the results to the previous benchmark result
+res$combine(res3)
+
+# plot the updated result
+library(ggplot2)
+mlr3viz::autoplot(res) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+The random forest (`classif.ranger`) with imputation worked quite well.
+We want to find out if we can improve the performance if we optmize the choice of the imputation strategy and the hyperparameters of the random forest.
+Therefore we will create a pipe that first imputes missing numerical values, then missing categorical values and at the end trains a random forest on the imputed data.
+```{r}
+impute_pos = as.data.table(mlr_pipeops)[grepl("impute", key)] # show available pipeops
+impute_pos
+impute_nums = c("imputehist", "imputemedian", "imputemean") #imputing strategies for numerical values
+impute_fcts = c("imputenewlvl", "imputesample") #... for categorical (factor) values
+
+# Branching pipeops for numerical and factor imputation
+po_branch_nums = po("branch", options = impute_nums, id = "brnch_nums")
+po_branch_fcts = po("branch", options = impute_fcts, id = "brnch_fcts")
+
+# Pipeops for numerical imputation
+pos_impute_nums = lapply(impute_nums, po)
+pos_impute_nums = gunion(pos_impute_nums)
+
+# Pipeops for factor imputation
+pos_impute_fcts = lapply(impute_fcts, po)
+pos_impute_fcts = gunion(pos_impute_fcts)
+
+# Build complete pipe
+pipe = po_branch_nums %>>% pos_impute_nums %>>% po("unbranch", id = "unbr_nums") %>>% 
+  po_branch_fcts %>>% pos_impute_fcts %>>% po("unbranch", id = "unbr_fcts") %>>% 
+  po("learner", learner = lrn("classif.ranger", num.trees = 200))
+# Plot the pipes layout.
+plot(pipe)
+grph_lrn = GraphLearner$new(pipe)
+
+# Define Tuning
+
+# ParamSet
+grph_lrn$param_set
+par_set = ParamSet$new(params = list(
+  grph_lrn$param_set$params$brnch_nums.selection,
+  grph_lrn$param_set$params$brnch_fcts.selection,
+  ParamInt$new(id = "classif.ranger.mtry", lower = 1, upper = titanic_tsk$ncol-1),
+  ParamInt$new(id = "classif.ranger.min.node.size", lower = 1, upper = 20)
+))
+
+# Tuning Budget
+term_evals = term("evals", n_evals = 20)
+
+# Tuning Instance
+instance = TuningInstance$new(
+  task = titanic_tsk,
+  learner = grph_lrn,
+  resampling = rsmp("cv", folds = 3),
+  measures = msr("classif.ce"),
+  param_set = par_set,
+  terminator = term_evals
+)
+
+# Construct and start tuner
+tuner = tnr("random_search")
+tuner$tune(instance)
+# Analyze the tuning result
+instance$result
+instance$archive(unnest = "tune_x")
+```
+
+With a nested cross-validation setting we can assess the unbiased performance of the tuned random forest.
+
+```{r}
+# similar as above we construct the self tuning learner
+grph_lrn_at = AutoTuner$new(
+  learner = grph_lrn, 
+  resampling = rsmp("cv", folds = 3), 
+  measures = msr("classif.ce"), 
+  tune_ps = par_set, 
+  terminator = term_evals,
+  tuner = tnr("random_search")
+)
+grph_lrn_at$id
+# give this Learner a shorter ID (usefull for the plot)
+grph_lrn_at$id = "rf_tuned_impute"
+
+
+rsmpl_res_graph_at = resample(titanic_tsk, grph_lrn_at, rds) #rds is taken from above (rds = rsmp("cv"))
+rsmpl_res_graph_at$aggregate()
+
+# combine the new results with previuys results
+res4 = as_benchmark_result(rsmpl_res_graph_at)
+res$combine(res4)
+mlr3viz::autoplot(res) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 

@@ -206,9 +206,10 @@ Be **light on dependencies**. Direct and recursive dependencies:
 
 # Consequences
 
-* steeper learning curve to learn mlr3
+* Steeper learning curve to learn mlr3
+  * Knowledge summarized in [`r icon::fa("book")` mlr3book](https://mlr3book.mlr-org.com/)
 
-* multiple packages for different functionality
+* Multiple packages for different functionality
   * mlr3learners
   * mlr3pipelines
   * mlr3tuning
@@ -216,8 +217,8 @@ Be **light on dependencies**. Direct and recursive dependencies:
   * mlr3viz
   * ...
   
-* easier extendable
-  * inherit classes and overwrite functionality
+* Easier extendable
+  * Inherit classes and overwrite functionality
 
 ---
 class: inverse, center, middle
@@ -300,7 +301,7 @@ learner$model
 
 # Learner
 
-`r icon::fa("smile")` Unified interface, to acess *feature importance*, *selected features* etc. for all learners. 
+`r icon::fa("smile")` Unified interface, to access *feature importance*, *selected features* etc. for all learners. 
 
 ```{r}
 learner$importance()
@@ -552,8 +553,8 @@ class: inverse, center, middle
 
 * Budget via class `Terminator`
   - iterations
-  - performance threashold
-  - model runtime and wallclock time
+  - performance threshold
+  - model runtime and wall-clock time
 
 * Nested resampling via class `AutoTuner`
 
@@ -614,6 +615,24 @@ autoplot(bmr)
 ```{r fig_at_benchmark, fig.width=0.5*FIG_WIDTH, echo = FALSE}
 ```
 ]
+
+
+---
+# How to find help
+
+* How do I start?
+  - Check these slides
+  - Check the [`r icon::fa("book")` mlr3book](https://mlr3book.mlr-org.com/)
+* What can I do with these R6 objects?
+  - Find out what kind of R6 object you have:
+  ```{r}
+  class(bmr)
+  ```
+  - Go to the corresponding help page
+  ```{r, eval = FALSE}
+  ?BenchmarkResult
+  ```
+  - _Fields_ documents data stored in this object and _Methods_ documents functions of this object.
 
 
 ---
@@ -680,7 +699,7 @@ grph = scale %>>% encode %>>% impute %>>% learner #<<
 
 # Access Hyperparameters of PipeOps
 
-Like learners, *PipeOps* have hyperparameters controling their behavior.
+Like learners, *PipeOps* have hyperparameters controlling their behavior.
 
 Change hyperparameter values in ...
 1. construction of *PipeOp*
@@ -760,7 +779,7 @@ rr$learners[[1]]$model$scale$center
 rr$learners[[10]]$model$scale$center
 ```
 
-`r icon::fa("info-circle")` Remember: Transforming the data before crossvalidating skews results. Transforming the data independently for training and test leads to wrong results!
+`r icon::fa("info-circle")` Remember: Transforming the data before cross-validating skews results. Transforming the data independently for training and test leads to wrong results!
 
 ---
 
@@ -889,7 +908,7 @@ instance$result$perf
 ```
 
 `r icon::fa("info-circle")` Tuning hyperparameters of *PipeOps* that *can* be active needs dependent parameters. 
-Check the [mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
+Check the [`r icon::fa("book")` mlr3book paradox chapter](https://mlr3book.mlr-org.com/paradox.html).
 ]
 
 ---
@@ -944,7 +963,7 @@ bmr$aggregate()[, -(1:3)]
 * Prediction combining with `classifavg` and `regravg`
 * and more.
 
-`r icon::fa("info-circle")` Check the [mlr3book pipelines chapter](https://mlr3book.mlr-org.com/pipelines.html) for exhaustive explanations and more examples.
+`r icon::fa("info-circle")` Check the [`r icon::fa("book")` mlr3book pipelines chapter](https://mlr3book.mlr-org.com/pipelines.html) for exhaustive explanations and more examples.
 
 ---
 
@@ -972,7 +991,7 @@ as.data.table(rr)
 * Inexpensive to work on:
   * `rbind()`: copying R6 objects &wedgeq; copying pointers
   * `cbind()`: `data.table()` over-allocates columns, no copies
-  * `[i, ]`: lookup row (possibly hashed), create a list of pointers
+  * `[i, ]`: look-up row (possibly hashed), create a list of pointers
   * `[, j]`: direct access to list element
 
 ---
@@ -1036,16 +1055,28 @@ Example:
 
 ---
 
-# Resources
+# Status of mlr3
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+.pull-left[
+- Under active development
+  - Minor API changes are possible
+  - GH versions of packages can be incompatible at short periods
+  - UX will be improved (feedback welcome!)
+- On CRAN
+  - mlr3, mlr3db, mlr3filters, mlr3learners
+- On GitHub
+  - mlr3pipelines, mlr3survival, mlr3tuning, mlr3viz, mlr3spatiotemporal
+- [More comming](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)!
+- [`r icon::fa("book")` mlr3book](https://mlr3book.mlr-org.com) covers actual state
 
-- [CI Status](https://github.com/mlr-org/mlr3/wiki/CI-Status)
-- [Extension packages](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)
-- [mlr3book](https://mlr3book.mlr-org.com)
+Want to contribute?
+[`r icon::fa("github")` mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+]
 
-Want to contribute?  
-[mlr3.mlr-org.com](https://mlr3.mlr-org.com)
+.pull-right[
+<iframe width="320" height="180" src="https://www.youtube.com/embed/wsP2hiFnDQs" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<iframe width="320" height="180" src="https://www.youtube.com/embed/gEW5RxkbQuQ" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+]
 
 
 

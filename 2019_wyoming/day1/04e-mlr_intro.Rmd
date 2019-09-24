@@ -32,16 +32,17 @@ Ensure all packages used in this tutorial are installed. This includes packages 
 # install from CRAN
 packages_cran = c(
     "remotes", "magrittr", "data.table", "ggplot2", "skimr", "DataExplorer",
-    "OpenML", "rpart.plot", "precrec",
+    "OpenML", "rpart.plot", "precrec", "farff",
     "glmnet", "kknn", "MASS", "ranger", "xgboost", "e1071",
-    "future", "future.apply",
-    "mlr3misc", "paradox", "mlr3", "mlr3filter", "mlr3learners")
+    "future", "future.apply")
+
 # install things from GitHub that are not yet on CRAN
 packages_gith = c(
     "mlr-org/mlr3tuning", "mlr-org/mlr3pipelines", "mlr-org/mlr3viz")
 
 to_install = setdiff(packages_cran, installed.packages()[,"Package"])
 if (length(to_install)) install.packages(to_install)
+install.packages(c("mlr3misc", "paradox", "mlr3", "mlr3filter", "mlr3learners"))
 lapply(packages_gith, remotes::install_github)
 ```
 
