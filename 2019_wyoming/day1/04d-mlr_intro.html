@@ -412,7 +412,7 @@ $(document).ready(function () {
 
 <div id="intro" class="section level1">
 <h1>Intro</h1>
-<p><strong>mlr3</strong> is a machine learning framework for R. Together with other packages from the same developers, mostly following the naming scheme “mlr3___“, it offers functionality around developing, tuning, and evaluating machine learning workflows.</p>
+<p><strong>mlr3</strong> is a machine learning framework for R. Together with other packages from the same developers, mostly following the naming scheme &quot;mlr3___&quot;, it offers functionality around developing, tuning, and evaluating machine learning workflows.</p>
 <p>We will walk through this tutorial interactively. The text is kept short to be followed in real time. There are links to the <a href="#appendix">Appendix</a> for further information that you can read in your spare time.</p>
 </div>
 <div id="prerequisites" class="section level1">
@@ -421,16 +421,17 @@ $(document).ready(function () {
 <pre class="r"><code># install from CRAN
 packages_cran = c(
     &quot;remotes&quot;, &quot;magrittr&quot;, &quot;data.table&quot;, &quot;ggplot2&quot;, &quot;skimr&quot;, &quot;DataExplorer&quot;,
-    &quot;OpenML&quot;, &quot;rpart.plot&quot;, &quot;precrec&quot;,
+    &quot;OpenML&quot;, &quot;rpart.plot&quot;, &quot;precrec&quot;, &quot;farff&quot;,
     &quot;glmnet&quot;, &quot;kknn&quot;, &quot;MASS&quot;, &quot;ranger&quot;, &quot;xgboost&quot;, &quot;e1071&quot;,
-    &quot;future&quot;, &quot;future.apply&quot;,
-    &quot;mlr3misc&quot;, &quot;paradox&quot;, &quot;mlr3&quot;, &quot;mlr3filter&quot;, &quot;mlr3learners&quot;)
+    &quot;future&quot;, &quot;future.apply&quot;)
+
 # install things from GitHub that are not yet on CRAN
 packages_gith = c(
     &quot;mlr-org/mlr3tuning&quot;, &quot;mlr-org/mlr3pipelines&quot;, &quot;mlr-org/mlr3viz&quot;)
 
 to_install = setdiff(packages_cran, installed.packages()[,&quot;Package&quot;])
 if (length(to_install)) install.packages(to_install)
+install.packages(c(&quot;mlr3misc&quot;, &quot;paradox&quot;, &quot;mlr3&quot;, &quot;mlr3filter&quot;, &quot;mlr3learners&quot;))
 lapply(packages_gith, remotes::install_github)</code></pre>
 <p>Load the packages we are going to use:</p>
 <pre class="r"><code>library(&quot;data.table&quot;)
@@ -550,7 +551,7 @@ credit = mlr3misc::encapsulate(&quot;callr&quot;, function() {
 #&gt;  n obs: 1000 
 #&gt;  n variables: 21 
 #&gt; 
-#&gt; ── Variable type:factor ───────────────────────────
+#&gt; ── Variable type:factor ──────
 #&gt;             variable missing complete    n n_unique
 #&gt;      checking_status       0     1000 1000        4
 #&gt;                class       0     1000 1000        2
@@ -582,7 +583,7 @@ credit = mlr3misc::encapsulate(&quot;callr&quot;, function() {
 #&gt;  rad: 280, new: 234, fur: 181, use: 103   FALSE
 #&gt;   &lt;10: 603, no : 183, 100: 103, 500: 63   FALSE
 #&gt; 
-#&gt; ── Variable type:numeric ──────────────────────────
+#&gt; ── Variable type:numeric ─────
 #&gt;                variable missing complete    n    mean      sd  p0    p25    p50     p75
 #&gt;                     age       0     1000 1000   35.55   11.38  19   27     33     42   
 #&gt;           credit_amount       0     1000 1000 3271.26 2822.74 250 1365.5 2319.5 3972.25
@@ -945,7 +946,7 @@ performances[, c(&quot;learner_id&quot;, &quot;classif.ce&quot;, &quot;classif.a
 #&gt;         learner_id classif.ce classif.auc
 #&gt; 1: classif.log_reg      0.243   0.7853896
 #&gt; 2:   classif.rpart      0.261   0.7231649
-#&gt; 3:  classif.ranger      0.238   0.8033159</code></pre>
+#&gt; 3:  classif.ranger      0.228   0.7997679</code></pre>
 </div>
 <div id="outlook" class="section level1">
 <h1>Outlook</h1>
