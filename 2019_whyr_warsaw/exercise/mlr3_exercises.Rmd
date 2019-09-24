@@ -38,13 +38,13 @@ titanic_nona_pred = titanic_pred[, !(colnames(titanic_pred) %in% na_cols), with 
 ```{r}
 # if mlr3 is not installed, run the following line:
 # remotes::install_github("mlr-org/mlr3verse")
-#library(mlr3verse)
-#FIXME
-lapply(c("~/gits/paradox/", "~/gits/mlr3misc", "~/gits/mlr3", "~/gits/mlr3learners/", "~/gits/mlr3tuning/", "~/gits/mlr3pipelines/"), devtools::load_all)
+library(mlr3verse) # loads all packages mlr3, mlr3tuning, mlr3learners, mlr3pipelines, mlr3viz etc.
 
+# Build Titanic Task
 titanic_tsk = TaskClassif$new(id = "titanic", backend = titanic, target = "Survived")
 titanic_tsk
 
+# Build Titanic Task without columsn that have NAs
 titanic_nona_tsk = TaskClassif$new(id = "titanic_nona", backend = titanic_nona, target = "Survived")
 titanic_nona_tsk
 ```
@@ -69,7 +69,7 @@ Train the previously defined learner on the `titanic_tsk` task.
 lrn$train(task = titanic_nona_tsk)
 ```
 
-The learner now stores the model:
+The learner now contains the trained model:
 ```{r}
 class(lrn$model)
 summary(lrn$model)
@@ -77,8 +77,9 @@ summary(lrn$model)
 
 ### Make Predictions
 
-Use the learner that now stores the model to predict the label on the `titanic.pred` data.
+Use the learner that now stores the model to predict the label on the `titanic_nona_pred` data.
 ```{r}
+# ?Learner
 pred = lrn$predict_newdata(task = titanic_nona_tsk, newdata = titanic_nona_pred)
 (pred_dt = as.data.table(pred))
 table(pred_dt$response)
@@ -154,6 +155,7 @@ mlr3viz::autoplot(res)
 We want to tune rpart decision tree
 
 ```{r}
+library(mlr3tuning)
 lrn_rpart = lrn("classif.rpart")
 lrn_rpart$param_set
 par_set = ParamSet$new(params = list(
@@ -164,7 +166,7 @@ par_set = ParamSet$new(params = list(
 mlr_terminators
 term_secs = term("clock_time")
 term_secs$param_set
-term_secs$param_set$values$secs = 3
+term_secs$param_set$values$secs = 3 # we allow the tuning for 3 seconds in each outer cross validation
 
 mlr_tuners
 tune_rs = tnr("random_search")
@@ -179,4 +181,103 @@ res2 = benchmark(design = benchmark_grid(titanic_tsk, rpart_tuned, rds))
 res$combine(res2)
 mlr3viz::autoplot(res)
 ```
+
+## mlr3 pipelines
+
+### Simple GraphLearners
+
+Add imputation strategies to the learners that can not handle missing values.
+```{r}
+lrns_nomissing = lapply(c("classif.log_reg", "classif.kknn", "classif.ranger"), lrn)
+as.data.table(mlr_pipeops) # show available pipeops
+lrns_sampleimp = lapply(lrns_nomissing, function(lrn) {
+  pipe = po("imputesample") %>>% po("learner", learner = lrn) 
+  GraphLearner$new(pipe)
+})
+
+res3 = resample(titanic_tsk, lrns_sampleimp, resampling = rds)
+res$combine(as_benchmark_result(design_impute))
+library(ggplot2)
+mlr3viz::autoplot(res) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Find the best imputation strategy including hyperpars:
+```{r}
+impute_pos = as.data.table(mlr_pipeops)[grepl("impute", key)] # show available pipeops
+impute_pos
+impute_nums = c("imputehist", "imputemedian", "imputemean") #imputing strategies for numerical values
+impute_fcts = c("imputenewlvl", "imputesample") #... for categorical (factor) values
+
+# Branching pipeops for numerical and factor imputation
+po_branch_nums = po("branch", options = impute_nums, id = "brnch_nums")
+po_branch_fcts = po("branch", options = impute_fcts, id = "brnch_fcts")
+
+# Pipeops for numerical imputation
+pos_impute_nums = lapply(impute_nums, po)
+pos_impute_nums = gunion(pos_impute_nums)
+
+# Pipeops for factor imputation
+pos_impute_fcts = lapply(impute_fcts, po)
+pos_impute_fcts = gunion(pos_impute_fcts)
+
+# Build complete pipe
+pipe = po_branch_nums %>>% pos_impute_nums %>>% po("unbranch", id = "unbr_nums") %>>% 
+  po_branch_fcts %>>% pos_impute_fcts %>>% po("unbranch", id = "unbr_fcts") %>>% 
+  po("learner", learner = lrn("classif.ranger", num.trees = 200))
+plot(pipe)
+grph_lrn = GraphLearner$new(pipe)
+
+# Define Tuning
+
+# ParamSet
+grph_lrn$param_set
+par_set = ParamSet$new(params = list(
+  grph_lrn$param_set$params$brnch_nums.selection,
+  grph_lrn$param_set$params$brnch_fcts.selection,
+  ParamInt$new(id = "classif.ranger.mtry", lower = 1, upper = titanic_tsk$ncol-1),
+  ParamInt$new(id = "classif.ranger.min.node.size", lower = 1, upper = 20)
+))
+
+# Tuning Budget
+term_evals = term("evals", n_evals = 20)
+
+# Tuning Instance
+instance = TuningInstance$new(
+  task = titanic_tsk,
+  learner = grph_lrn,
+  resampling = rsmp("cv", folds = 3),
+  measures = msr("classif.ce"),
+  param_set = par_set,
+  terminator = term_evals
+)
+
+# Construct and start tuner
+tuner = tnr("random_search")
+tuner$tune(instance)
+instance$result
+instance$archive(unnest = "tune_x")
+```
+
+With a nested cross-validation setting we can assess the performance of the tuned random forest.
+
+```{r}
+grph_lrn_at = AutoTuner$new(
+  learner = grph_lrn, 
+  resampling = rsmp("cv", folds = 3), 
+  measures = msr("classif.ce"), 
+  tune_ps = par_set, 
+  terminator = term_evals,
+  tuner = tnr("random_search")
+)
+grph_lrn_at$id = "rf_tuned_impute"
+rsmpl_res_graph_at = resample(titanic_tsk, grph_lrn_at, rds) #rds is taken from above (rds = rsmp("cv"))
+rsmpl_res_graph_at$aggregate()
+res4 = as_benchmark_result(rsmpl_res_graph_at)
+res$combine(res4)
+mlr3viz::autoplot(res) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+### Building an advanced Learner
+
+
 
