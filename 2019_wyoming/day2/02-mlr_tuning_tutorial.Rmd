@@ -1,0 +1,445 @@
+---
+title: "Machine Learning Algorithm Tuning with mlr3"
+output:
+  html_document:
+    toc: TRUE
+---
+
+```{r, include = FALSE}
+# Just some preparation
+knitr::opts_chunk$set(
+  cache = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+data.table::setDTthreads(1)
+options(width=110)
+set.seed(8008135)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+# Intro
+
+In this case we will continue working with the **German Credit Dataset**. Yesterday we peeked into the data set by using and comparing some learners with ther default parameters. We will now see how to:
+
+- Tune hyperparameters for a given problem
+- Perform nested resampling
+- Adjust decision thresholds
+
+# Prerequisites
+
+We expect you have installed all packages from day 1. If not, load the day 1 script and run the **Prerequisites** install chunk.
+
+Load the packages we are going to use:
+
+```{r, message=FALSE, warning=FALSE}
+library("data.table")
+library("magrittr")
+library("mlr3")
+library("mlr3learners")
+library("ggplot2")
+theme_set(theme_light())
+```
+
+We use the same data as yesterday.
+
+```{r, message=FALSE}
+# load the data set (id 31) from OpenML Library, clean it up and convert it
+# to a TaskClassif.
+task = mlr3misc::encapsulate("callr", function() {
+  data.table::as.data.table(OpenML::getOMLDataSet(data.id = 31))
+}) %$% droplevels(result) %>%
+  TaskClassif$new(id = "new_credit", target = "class", positive = "good")
+```
+Also, because tuning often takes a long time, we want to make more efficient use of our multicore CPUs.
+```{r, warning=FALSE}
+future::plan("multiprocess")
+```
+
+## Evaluation
+
+We evaluate all algorithms using 10-fold cross-validation. We use a *fixed* train-test split, i.e. the same splits for each evaluation. Otherwise, some evaluation could get unusually "hard" splits, which would make comparisons unfair.
+
+```{r}
+set.seed(8008135)
+cv10_instance = rsmp("cv", folds = 10)$instantiate(task)
+```
+
+# Simple Parameter Tuning
+
+- Use the `paradox` package for search space definition
+- Use the `mlr3tuning` package for tuning
+```{r}
+library("mlr3tuning")
+library("paradox")
+```
+
+## Search Space and Prolem Definition
+
+- First need to decide what `Learner` to optimize.
+  - (We could also try to optimize multiple `Learner`s simultaneously, i.e. choose the `Learner` to use automatically. We get to that in Day 3)
+  - We use `"classif.kknn"`, the "kernelized" k-nearest neighbour classifier
+- Then we decide what parameters we optimize over
+  - What are our options?
+```{r}
+knn = lrn("classif.kknn", predict_type = "prob")
+print(knn$param_set)
+```
+- We will use `kknn` as a normal kNN without weighting first:
+```{r}
+knn$param_set$values$kernel = "rectangular"
+```
+- We use the `paradox` package to define a search space. See [Appendix](#very-quick-paradox-primer) for a short list of possible parameter types.
+- At first we tune the `k` parameter from 10 to 20, as well as the distance function (L1 or L2).
+```{r}
+searchspace = ParamSet$new(list(
+  ParamInt$new("k", lower = 3, upper = 20),
+  ParamInt$new("distance", lower = 1, upper = 2)
+))
+```
+
+- We define a "tuning instance" that represents the problem we are trying to optimize.
+  - What is the task we are optimizing for?
+  - What learner are we using?
+  - How do we do resampling?
+  - What is the performance measure?
+  - What is the search space ("parameter set")?
+  - When are we done searching? (Disregard this for now).
+
+```{r}
+instance_grid = TuningInstance$new(
+  task = task,
+  learner = knn,
+  resampling = cv10_instance,
+  measures = msr("classif.ce"),
+  param_set = searchspace,
+  terminator = term("none")
+)
+```
+
+## Grid Search
+
+- A simple tuning method is to try all possible combinations of parameters: **Grid Search**
+  - Pro: Very intuitive and simple
+  - Con: Inefficient if the search space is large
+- We get the `"grid_search"` tuner for this
+```{r}
+tuner_grid = tnr("grid_search", resolution = 18, batch_size = 36)
+```
+- Tuning works by calling `$tune()`. Note that it *modifies* our "tuning instance"--the result can be found in the `instance` object.
+- Be aware that tuning can 
+```{r}
+tuner_grid$tune(instance_grid)
+```
+- The result can be found in the `$result` slot. We can also plot the performance.
+```{r}
+instance_grid$result
+```
+
+- We can look at the "archive" of evaluated configurations
+- We expand the "params" (the parameters that the `Learner` actually saw)
+```{r}
+perfdata = instance_grid$archive("params")
+perfdata[, .(nr, k, distance, classif.ce)]
+```
+
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = as.factor(distance))) +
+  geom_line() + geom_point(size = 3)
+```
+
+- Euclidean distance (`distance` = 2) seems to work better, but there is much randomness introduced by the resampling instance, so you may see a different result!
+- `k` between 5 and 10 perform well
+
+## Random Search and Transformation
+
+- Let's look at a larger search space. In fact, how about we tune *all* available parameters and limit `k` to large values (50).
+- **Problem 1**: The difference between `k` = 3 and `k` = 4 is probably larger than the difference between `k` = 49 and `k` = 50.
+  - We will use a **transformation function** and sample on the log-space.
+  - For this we define the range for `k` from `log(3)` to `log(50)` and exponentiate in the transformation.
+	- We must use `ParamDbl` instead of `ParamInt` now!
+```{r}
+large_searchspace = ParamSet$new(list(
+  ParamDbl$new("k", lower = log(3), upper = log(50)),
+  ParamDbl$new("distance", lower = 1, upper = 3),
+  ParamFct$new("kernel", c("rectangular", "gaussian", "rank", "optimal")),
+  ParamLgl$new("scale")
+))
+
+large_searchspace$trafo = function(x, param_set) {
+  x$k = round(exp(x$k))
+  x
+}
+```
+- **Problem 2**: Using grid search will take a long time.
+  - Even trying out three different values for `k`, `distance`, `kernel` and the two values for `scale` will take 54 evaluations.
+  - We use a different search algorithm: **Random Search**
+  - The *tuning instance* must now contain a *termination criterion*: When do we stop?
+```{r}
+tuner_random = tnr("random_search", batch_size = 36)
+
+instance_random = TuningInstance$new(
+  task = task,
+  learner = knn,
+  resampling = cv10_instance,
+  measures = msr("classif.ce"),
+  param_set = large_searchspace,
+  terminator = term("evals", n_evals = 36)
+)
+```
+```{r}
+tuner_random$tune(instance_random)
+```
+
+- We can get the "archive" in two ways: expand the `"tune_x"` parameters (the points we sampled on the search space), and the `"params"` parameters: the points the `Learner` was used with---these are the `exp()`'d parameters!
+```{r}
+perfdata = instance_random$archive("tune_x")
+perfdata[, .(k, distance, kernel, scale, classif.ce)]
+```
+
+```{r}
+perfdata = instance_random$archive("params")
+perfdata[, .(k, distance, kernel, scale, classif.ce)]
+```
+
+
+Let's look at some plots of performance by parameter.
+- the following suggests that `scale` has a strong influence on performance.
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = scale)) +
+  geom_point(size = 3)
+```
+- The kernel seems to be less influential:
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel)) +
+  geom_point(size = 3)
+```
+- The influence of `distance` seems to be negligible
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = distance)) +
+  geom_point(size = 3)
+```
+
+It is always interesting to look at what could have been. The following dataset contains an optimization run result with 3600 evaluations--more than above by a factor of 100.
+```{r}
+perfdata = readRDS("randomsearch_3600.rds")
+```
+- The scale effect is just as visible.
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = scale)) +
+  geom_point(size = 2, alpha = 0.3)
+```
+- There seems to be a pattern by kernel as well...
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel)) +
+  geom_point(size = 2, alpha = 0.3)
+```
+- In fact, if we zoom in to `(5, 30)` x `(0.2, 0.3)` and do loess smoothing we see that different kernels have their optimum at different `k`.
+```{r, warning=FALSE}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel,
+  group = interaction(kernel, scale))) +
+  geom_point(size = 2, alpha = 0.3) + geom_smooth() +
+  xlim(5, 30) + ylim(0.2, 0.3)
+```
+- What about the `distance` parameter? If we select all results with `k` between 10 and 20 and plot distance and kernel we see an approximate relationship
+```{r, warning=FALSE}
+ggplot(perfdata[k > 10 & k < 20 & scale == TRUE],
+  aes(x = distance, y = classif.ce, color = kernel)) +
+  geom_point(size = 2) + geom_smooth()
+```
+- Observations:
+  - The `scale` makes a lot of difference
+  - The `distance` seems to make the least difference
+  - Had we done grid search, we would have wasted a lot of evaluations on trying different `distance` values that usually give similar results. This is why random search works well.
+  - An even more intelligent approach would be to observe that `scale = FALSE` performs badly and not try out so many points with that one.
+
+
+# Tuning Results and Nested Resampling
+- Which method works better? If we choose our best model, how well will it perform in the wild?
+- Naive comparison:
+```{r}
+instance_random$result$perf
+instance_grid$result$perf
+```
+
+- Problem: *overtuning*:
+  - The more we search, the more our result is likely to just be "lucky" on your training data
+  - Different search spaces or search methods may introduce different amounts of randomness, so even the comparison is flawed!
+- Solution: Nested Resampling
+
+## Nested Resampling
+
+- Let's act like our tuning method is actually a `Learner`!
+- `$train()` method:
+  - Tune hyperparameters on the training data
+  - Train a model with optimal hyperparameters on training data
+- `$predict()` method: use model trained on training data as model
+- This is just the workflow we use when tuning hyperparameters: Find the best parameters and use them for training.
+- The `AutoTuner` does exactly this.
+
+```{r}
+grid_auto = AutoTuner$new(
+  learner = knn,
+  resampling = rsmp("cv", folds = 10),  # we can NOT use fixed resampling here
+  measures = msr("classif.ce"),
+  tune_ps = searchspace,
+  terminator = term("none"),
+  tuner = tnr("grid_search")
+)
+grid_auto$id = "gridsearch"
+
+random_auto = AutoTuner$new(
+  learner = knn,
+  resampling = rsmp("cv", folds = 10),
+  measures = msr("classif.ce"),
+  tune_ps = large_searchspace,
+  terminator = term("evals", n_evals = 36),
+  tuner = tnr("random_search")
+)
+random_auto$id = "randomsearch"
+```
+
+- Let's benchmark these
+- We can also compare this to the random forest, which often performs well without tuning
+```{r}
+design = data.table(
+  task = list(task),
+  learner = list(grid_auto, random_auto, lrn("classif.ranger")),
+  resampling = list(cv10_instance)
+)
+```
+- We are running 2 `AutoTuner`s **x** 10 outer resampling folds **x** 36 tuning steps **x** 10 inner resampling folds (plus 10 short folds of `ranger`). This may take a while, having many CPU cores helps.
+```{r}
+bmr = benchmark(design)
+```
+
+```{r}
+bmr$aggregate()
+```
+
+# ROC Analysis
+
+- A bank may have to consider that falsely granting a credit that ends up a default ("false positive") may be more costly than falsely rejecting a customer who would have paid up ("false negative").
+- `Learners` can predict "probabilities" and the Bank may choose different cutoff values
+- What are the tradeoffs between false positive and false negative rates?
+- We use `resample()` to generate data about model predictions vs. actual values
+```{r}
+pred = resample(task, lrn("classif.ranger", predict_type = "prob"), cv10_instance)$prediction()
+```
+- The resampling prediction contains true values as well as probability predictions
+```{r}
+pred
+```
+- We can plot the ROC using `mlr3viz`. The curve is a `ggplot` plot, so we can add further details.
+- Suppose the bank does not want to get more than a 10\% false positive rate
+```{r}
+library("mlr3viz")
+roc(pred)
+```
+- What does the naive prediction (decision boundary at 50\%) look like?
+```{r}
+pred$confusion
+```
+```{r}
+pred$score(msr("classif.fpr"))
+```
+```{r}
+pred$score(msr("classif.fnr"))
+```
+- That is a high false positive rate. We could adjust the decision bound and do better. 
+
+## Misclassification Cost and Threshold Optimization
+
+- Suppose the outlook is as follows: The bank gains or loses only when it engages with a potential customer, but losses are more severe if the customer defaults.
+|    | Good Customer (truth) | Bad Customer (truth) |
+| :- | :- | :- |
+| Good Customer (predicted) | +0.35 | -1.0 |
+| Bad Customer (predicted) | 0 | 0 |
+```{r}
+# note we have "costs" which is negative profit
+cost = matrix(c(-0.35, 0, 1, 0), nrow = 2)
+dimnames(cost) = list(response = c("good", "bad"), truth = c("good", "bad"))
+cost
+```
+- `mlr3` provides us with a "cost measure" that tells us how good our algorithm is doing. The bank is profitable (negative costs).
+```{r}
+costmsr = msr("classif.costs", costs = cost)
+pred$score(costmsr, task = task)
+```
+- How are different thresholds doing? E.g. being more selective
+```{r}
+pred$set_threshold(0.75)
+pred$score(costmsr, task = task)
+```
+- This is better. What is the best we can do?
+```{r}
+objective = function(thresh) {
+  pred$set_threshold(thresh)
+  pred$score(costmsr, task = task)  
+}
+
+opt_result = optimize(objective, interval = c(0, 1))
+
+opt_result
+```
+
+## Bonus Insight
+
+- We note that the line of constant cost has a slope of `1 / .35 * 300 / 700` (from the marginal cost of getting one more false positive vs. true positive, and the number of negative vs. positive people in the test population). The optimum has a TPR and FPR corresponding to a tangent to this line. 
+```{r, warning=FALSE}
+slope = 1 / .35 * 300 / 700
+
+pred$set_threshold(opt_result$minimum)
+our_point = list(
+  x = pred$score(msr("classif.fpr")),
+  y = pred$score(msr("classif.tpr"))
+)
+
+# increment grey line intercept: increasing cost by 0.01 units shifts the equal
+# cost line by 1 / cost_per_TPR.
+# cost_per_TPR: (cost gained per true pos indiv) * (fraction of pos individua)
+increm = 1 / (.35 * 700 / 1000) / 100  
+roc(pred) +
+  geom_abline(intercept = c(seq(-2, 0, by=increm), seq(0, 2, by = increm)),
+  slope = slope, color = "gray", size = 0.5) +
+  geom_abline(intercept = c(seq(-2, 0, by=increm*10), seq(0, 2, by=increm*10)),
+  slope = slope, color = "gray", size = 1) +
+  geom_abline(intercept = our_point$y - slope * our_point$x, slope = slope) +
+  geom_point(aes(x = our_point$x, y = our_point$y),
+    size = 7, shape = "plus", color = "blue") +
+  ggtitle("ROC; Grey lines: equal cost lines in increments of -0.01")
+```
+
+# Appendix
+
+## Very quick `paradox` primer
+
+Initialization:
+```{r, eval = FALSE}
+ParamSet$new(list( <PARAMETERS> ))
+```
+Possible parameter types:
+```{r, eval = FALSE}
+# - logical (values TRUE, FALSE)
+ParamLgl$new("parameter_id")
+# - factorial (discrete values from a list of 'levels')
+ParamFct$new("parameter_id", c("value1", "value2", "value3"))
+# - integer (from 'lower' to 'upper' bound)
+ParamInt$new("parameter_id", lower = 0, upper = 10)
+# - numeric (from 'lower' to 'upper' bound)
+# - unfortunately named after the storage type, "double precision floating point"
+ParamDbl$new("parameter_id", lower = 0, upper = 10)
+
+# Also possible: "untyped", but we can not tune with this!
+ParamUty$new("parameter_id")
+```
+
+So an example parameter set with one logical parameter `"flag"` and one integer parameter `"count"`:
+```{r}
+ParamSet$new(list(
+  ParamLgl$new("flag"),
+  ParamInt$new("count", lower = 0, upper = 10)
+))
+```
+
+See the [online vignette](https://mlr3book.mlr-org.com/paradox.html) of `paradox` for a more complete introduction.
