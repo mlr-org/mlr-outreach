@@ -49,14 +49,14 @@ library(mlr3verse) # loads all packages mlr3, mlr3tuning, mlr3learners, mlr3pipe
 titanic_tsk = TaskClassif$new(id = "titanic", backend = titanic, target = "Survived")
 titanic_tsk
 
-# Build Titanic Task without columsn that have NAs
+# Build Titanic Task without columns that have NAs
 titanic_nona_tsk = TaskClassif$new(id = "titanic_nona", backend = titanic_nona, target = "Survived")
 titanic_nona_tsk
 ```
 
 ### Define an mlr3 Learner
 
-Define a logisitc regression learner
+Define a logistic regression learner
 ```{r}
 # Check available learners
 mlr_learners
@@ -103,7 +103,7 @@ test_inds = setdiff(seq_len(n), train_inds)
 Now we can predict on data with known labels and calculate various performance measures:
 ```{r}
 lrn$predict_type
-lrn$predict_type = "prob" # change predict type to probabilities as some measures need probabilites
+lrn$predict_type = "prob" # change predict type to probabilities as some measures need probabilities
 
 # train the model on training indices
 lrn$train(task = titanic_nona_tsk, row_ids = train_inds)

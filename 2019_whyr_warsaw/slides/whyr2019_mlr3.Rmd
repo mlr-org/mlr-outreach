@@ -80,6 +80,11 @@ whyR conference, Warsaw
 .talk-date.i[
 September 27th, 2019
 ]
+
+.center[
+Slides: [bit.ly/whyr2019_mlr3](https://raw.githack.com/mlr-org/mlr-outreach/master/2019_whyr_warsaw/slides/whyr2019_mlr3.html#1)  
+Examples: [bit.ly/whyr2019_mlr3ex](https://raw.githubusercontent.com/mlr-org/mlr-outreach/master/2019_whyr_warsaw/exercise/mlr3_exercises.Rmd)
+]
 ]
 
 ---
@@ -539,19 +544,19 @@ class: inverse, center, middle
 
 ---
 
-# Tuning
+# mlr3tuning
+
+Performance of most methods depends on hyperparameters, choose them so the method performs well on the given data.
 
 * Algorithms: 
   - _Grid Search_
   - _Random Search_ 
   - _Simulated Annealing_
 
-* In process
-  - _Bayesian Optimization_
-  - _Iterated F-racing_
-  - _EAs_
+* In process:
+  - _Bayesian Optimization_, _Iterated F-racing_, _EAs_, _Hyperband_
 
-* Budget via class `Terminator`
+* Budget via class `Terminator`:
   - iterations
   - performance threshold
   - model runtime and wall-clock time
@@ -618,7 +623,7 @@ autoplot(bmr)
 
 
 ---
-# How to find help
+# How to find help for mlr3
 
 * How do I start?
   - Check these slides
@@ -633,6 +638,9 @@ autoplot(bmr)
   ?BenchmarkResult
   ```
   - _Fields_ documents data stored in this object and _Methods_ documents functions of this object.
+* Why does this not work?
+  - Ask at [`r icon::fa("stack-overflow")` stackoverflow](https://stackoverflow.com/questions/tagged/mlr3).
+  - Write a GitHub issue (in the according project)
 
 
 ---
@@ -650,7 +658,7 @@ old.hooks = fansi::set_knit_hooks((knitr::knit_hooks))
 options(crayon.enabled = TRUE)
 ```
 
-So far *mlr3* just modeled this part:
+So far *mlr3* just modeled this part (model fitting):
 <div style="
     border: solid #ff0000 10px;
     width: 189px;
@@ -658,17 +666,18 @@ So far *mlr3* just modeled this part:
     position: fixed;
     left: 324px;
     top: 416px;"></div>
-```{r fig_pipelines, echo = FALSE, out.width="80%"}
+```{r fig_pipelines, echo = FALSE, out.width="70%"}
 ```
 
-Step 1: Use pipelines for preprocessing (feature extraction/selection, missing data imputation etc.).  
-Step 2: Use pipelines for ensemble models.
+mlr3pipelines creates ML workflows for
+- preprocessing (feature extraction/selection, missing data imputation etc.).  
+- ensemble models (model averaging, model stacking)
 
 ---
 
 # Preprocessing Pipelines
 
-We can put preprocessing *PipeOps* in front of a Learner
+We can put preprocessing operations (*PipeOps*) in front of a Learner
 
 .center[
 ![pipeline example](assets/mlr3pipelines-slide12.svg)
@@ -786,7 +795,7 @@ rr$learners[[10]]$model$scale$center
 # Tune Parameters of PipeOps
 
 .pull-left[
-Access *PipeOp* hyperparameter through param with its prefix in the *GraphLearner*.
+Access *PipeOp* hyperparameter through parameter with its prefix in the *GraphLearner*.
 
 ```{r}
 ps = ParamSet$new(list(
@@ -821,7 +830,7 @@ instance$result$tune_x
 
 ---
 
-# Advanced Pipelines
+# Nonlinear Pipelines
 
 Pipelines become exiting, once you can modify the path of the data using these *PipeOps*:
 
@@ -1037,9 +1046,9 @@ Task stores data in a `DataBackend`:
   
   * `mlr3db::DataBackendDplyr`: Backend for many DBMS (out-of-memory)
   
-  * `DataBackendCbind`: Combine backends thorugh `task$cbind(backend)` (virtual)
+  * `DataBackendCbind`: Combine backends through `task$cbind(backend)` (virtual)
   
-  * `DataBackendRbind`: Combine backends thorugh `task$rbind(backend)` (virtual)
+  * `DataBackendRbind`: Combine backends through `task$rbind(backend)` (virtual)
     
 ---
 
@@ -1066,7 +1075,7 @@ Example:
   - mlr3, mlr3db, mlr3filters, mlr3learners
 - On GitHub
   - mlr3pipelines, mlr3survival, mlr3tuning, mlr3viz, mlr3spatiotemporal
-- [More comming](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)!
+- [More coming](https://github.com/mlr-org/mlr3/wiki/Extension-Packages)!
 - [`r icon::fa("book")` mlr3book](https://mlr3book.mlr-org.com) covers actual state
 
 Want to contribute?
