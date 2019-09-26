@@ -1,0 +1,394 @@
+---
+title: "Machine Learning Algorithm Tuning with mlr3"
+output:
+  html_document:
+    toc: TRUE
+---
+
+```{r, include = FALSE}
+# Just some preparation
+knitr::opts_chunk$set(
+  cache = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+data.table::setDTthreads(1)
+options(width=110)
+set.seed(8008135)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+# Intro
+
+In this case we will be working with the **Ames Housing Dataset** from today's kaggle challenge. We already used different `Learner`s on it and tried to optimize their hyperparameters. Today we will
+
+- preprocess the data as an integrated step of the model fitting process
+- tune the preprocessing parameters
+- use multiple `Learners` in as an *ensemble* model
+
+# Prerequisites
+
+We expect you have installed all packages from day 1. If not, load the day 1 script and run the **Prerequisites** install chunk.
+
+Additional packages needed:
+```{r, eval = FALSE}
+install.packages(c("mlr3filters", "visNetwork"))
+remotes::install_github("mlr-org/mlr3pipelines")
+remotes::install_github("mlr-org/mlr3learners")
+```
+
+Load the packages we are going to use:
+
+```{r, message=FALSE, warning=FALSE}
+library("data.table")
+library("magrittr")
+library("mlr3")
+library("mlr3learners")
+library("ggplot2")
+theme_set(theme_light())
+library("mlr3tuning")
+future::plan("multiprocess")
+```
+
+# Intro
+
+In this tutorial we will take a look at composite machine learning algorithms that may incorporate data preprocessing or the combination of multiple `Learner`s ("ensemble methods").
+
+The package we use is **mlr3pipelines**, which enables us to chain "`PipeOp`" objects into data flow graphs. Load the package using
+```{r}
+library("mlr3pipelines")
+```
+
+We will start with a simple example and then go on to work on the Kaggle dataset we have seen the past two days. Get it at https://www.kaggle.com/c/ames-day3/data and save the datasets in the `data/` directory.
+
+# Preprocessing
+
+- Real world data often has properties that many Learners can not handle natively
+  - missing values
+  - categorical features
+    - possibly with high cardinality
+  - multicollinearity
+    - an important instance of that: almost constant features
+- Sometimes data needs to be transformed to make the available signal more compatible with the Learner and remove irrelevant noise ("feature extraction")
+  - remove irrelevant features ("feature extraction")
+  - add feature interactions
+
+## Ames Housing Data
+
+- As said before, you should have the ames data from https://www.kaggle.com/c/ames-day3/data saved in the `data/` directory.
+- Note the `read.csv` call we use: both empty strings and 'NA' strings indicate missing values.
+- Lets load the data and construct a `Task`
+
+```{r}
+train_set = read.csv("data/ames_housing_train_original.csv", na.string = c("", "NA"))
+task = TaskRegr$new(id = "ames_housing", backend = train_set, target = "SalePrice")
+```
+- We instantiate a resampling instance for this task to be able to compare resampling performance.
+```{r}
+set.seed(8008135)
+cv10_instance = rsmp("cv")$instantiate(task)
+```
+- Because the data is not very well behaved at all, we are going to make a smaller task in the beginning to try some things.
+```{r}
+small_task = task$clone()$select(c("Garage.Yr.Blt", "Lot.Frontage", "Bsmt.Exposure", "Yr.Sold"))
+```
+
+## Building an Imputation Pipeline
+
+- We notice we have lots of "missing" data here. The `Task` object reports these with the `$missings()` function.
+```{r}
+small_task$missings()
+```
+- -> First we do *imputation*
+- There are a few imputation `PipeOp`s
+```{r}
+mlr_pipeops$keys("impute")
+```
+- We will do median imputation for numeric features. What does it look like?
+- Note we have to put the `Task` in a `list()` to train a `PipeOp`.
+```{r}
+imputed = po("imputemedian")$train(list(small_task))[[1]]
+imputed$missings()
+```
+- It did not touch the factorial features!
+- For factorial features, we will add a new level `.MISSING`
+- We create a `Graph` from the two `PipeOp`s, they work one after the other.
+```{r}
+imputer = po("imputemedian") %>>% po("imputenewlvl")
+imputer$plot(html = TRUE)
+```
+```{r}
+imputed = imputer$train(small_task)[[1]]
+imputed$missings()
+```
+
+- Compare the levels of a random feature with the original task:
+```{r}
+small_task$levels("Bsmt.Exposure")
+
+imputed$levels("Bsmt.Exposure")
+```
+
+- Let's see how this works with a very simple learner, `regr.lm`.
+```{r}
+limo = lrn("regr.lm")
+```
+
+- Compare the original task: Gives an error
+```{r, error = TRUE}
+resample(small_task, limo, cv10_instance)$aggregate(msr("regr.mae"))
+```
+- With the imputer, should work
+```{r}
+resample(small_task, imputer %>>% limo, cv10_instance)$aggregate(msr("regr.mae"))
+```
+
+- The `Learner` would not know know which data was imputed
+- We add "missing indicator" columns
+- `po("missind")` is used for this, *but* it removes all original columns!
+```{r}
+po("missind")$train(list(small_task))[[1]]
+```
+- We need to calculate in parallel!
+```
+             ----------
+[INPUT] -+-->| impute |--------,
+         |   ----------        |
+         |                     V
+         |   -----------   -----------
+         `-->| missind |-->| Feature |--> [OUTPUT]
+             -----------   |  Union  |
+                           -----------
+```
+
+- For this we need the "upper" lane: we have it already, `imputer`
+- The lower lane is just `po("missind")`
+- We combine everything in `po("featureunion")`
+
+```{r}
+impandmiss = gunion(list(imputer, po("missind"))) %>>% po("featureunion")
+
+impandmiss$plot(html = TRUE)
+```
+
+```{r}
+impandmiss$train(small_task)[[1]]
+```
+- When training this the result contains both the imputed features, and also the missing indicator columns
+- There are *too many* missing indicator columns: `"Bsmt.Exposure"` is a factorial column, so the `.MISSING` level already shows there is missing data--`"missing_Bsmt.Exposure"` is superfluous
+- We therefore prepend `missind` with the `"select"` `PipeOp` that filters out all the non-integer columns.
+```{r}
+impandmiss = gunion(list(imputer, po("select", selector = selector_type("integer")) %>>% po("missind"))) %>>% po("featureunion")
+
+impandmiss$plot(html = TRUE)
+```
+
+```{r}
+impandmiss$train(small_task)[[1]]
+```
+```{r}
+impandmiss$train(small_task)[[1]]$head(8)
+```
+
+```{r}
+resample(small_task, impandmiss %>>% limo, cv10_instance)$aggregate(msr("regr.mae"))
+```
+- This gives us a smaller MAE, possibly the learner is making use of the information that a value was actually imputed.
+
+## Making Models more robust
+
+- If we try this pipelne with the full `Task`, we run into trouble: Our model doesn't know how to handle new factor levels during prediction.
+```{r, error = TRUE}
+resample(task, impandmiss %>>% limo, cv10_instance)
+```
+
+- Problem: Test set contains levels that were not seen during training, which the `Learner` can not handle
+- We use another `PipeOp`, `"fixfactors"`, that makes sure no new levels are introduced:
+  - It remembers during training what factor levels were seen
+  - It converts unseen factor levels during prediction to `NA` values.
+- These `NA` values we have to impute *again*, but not with the `.MISSING` imputer---it could add new levels again!
+- Instead we use the `"imputesample"` imputer: it samples randomly from the training set.
+- We also add the `"removeconstants"` pipeop, because it is possible that a training split only contains a single level, which could break learners.
+```{r}
+robustify = po("fixfactors") %>>% po("imputesample") %>>% po("removeconstants")
+robustimp = impandmiss %>>% robustify
+```
+
+```{r, warning = FALSE}
+resample(task, robustimp %>>% limo, cv10_instance)$aggregate(msr("regr.mae"))
+```
+- Taking into account more features sure pays off!
+- But we get a warning about rank deficient matrix, we should try a model that can handle large numbers of features
+
+```{r}
+resample(task, robustimp %>>% lrn("regr.ranger"), cv10_instance)$aggregate(msr("regr.mae"))
+```
+
+## Collapsing Factors and Tuning
+
+- We can use the `"collapsefactors"` `PipeOp` to remove very infrequent factors.
+- How many should we collapse? Let's find out by tuning.
+```{r}
+collapsinglrn = GraphLearner$new(robustimp %>>% po("collapsefactors") %>>% lrn("regr.lm"))
+```
+- We look at the `ParamSet` to see which parameter we can tune. There are a lot! Each parameter is named after the `PipeOp` it belongs to.
+```{r}
+collapsinglrn$param_set
+```
+- We optimize the `collapsefactors.target_level_count` parameter.
+```{r}
+library("paradox")
+searchspace = ParamSet$new(list(
+  ParamDbl$new("log_collapsefactors.target_level_count", lower = log(2), upper = log(100))
+))
+searchspace$trafo = function(x, param_set) {
+  list(collapsefactors.target_level_count = round(exp(x$log_collapsefactors.target_level_count)))
+}
+```
+- Because this is only one parameter, we will use grid search. For higher dimensions, random search is more appropriate.
+```{r}
+inst = TuningInstance$new(
+  task, collapsinglrn, cv10_instance, msr("regr.mae"),
+  searchspace, term("none")
+)
+tuner = tnr("grid_search", resolution = 10)
+```
+
+```{r, warning = FALSE}
+tuner$tune(inst)
+```
+```{r}
+arx = inst$archive("tune_x")
+ggplot(arx, aes(x = log_collapsefactors.target_level_count, y = regr.mae)) + geom_line()
+```
+
+- Ultimately this does not appear to be very successful
+```{r}
+inst$result
+```
+
+# Other Preprocessing Ideas
+
+## Feature Selection
+
+- A common use case for preprocessing is feature filtering
+- `mlr3pipelines` makes use of the `mlr3filters` package
+```{r}
+library("mlr3filters")
+mlr_filters
+```
+- We try the `correlation` filter. For clarity we will also drop all non-integer features
+```{r}
+fltgraph = robustimp %>>% po("select", id = "selector2", selector = selector_type("integer")) %>>%
+  po("filter", flt("correlation"), filter.nfeat = 10)
+
+fltgraph$plot(html = TRUE)
+```
+```{r}
+fltgraph$train(task)[[1]]$data()
+```
+
+- The performance is not stellar, but having few features is helpful when trying to interpret the model
+```{r}
+rr = resample(task, fltgraph %>>% limo, cv10_instance, store_model = TRUE)
+rr$aggregate(msr("regr.mae"))
+```
+```{r}
+summary(rr$learners[[1]]$model$regr.lm$model)
+```
+
+## PCA
+
+A popular preprocessing method for feature extraction is principal component analysis
+- We use the `"pca"` `PipeOp` and take the first 20 principal components
+- Again just from the numerical features
+
+```{r}
+pcagraph = robustimp %>>% po("select", id = "selector2", selector = selector_type("integer")) %>>%
+  po("pca", rank. = 20)
+```
+```{r}
+rr = resample(task, pcagraph %>>% limo, cv10_instance, store_model = TRUE)
+rr$aggregate(msr("regr.mae"))
+```
+```{r}
+summary(rr$learners[[1]]$model$regr.lm$model)
+```
+
+# Multiple Learners
+
+## Mean Aggregation
+
+- Use multiple learners, aggregate their mean prediction
+- May give better results if individual learners predict well on average with high variance
+```{r}
+meangraph = robustimp %>>% list(lrn("regr.lm"), lrn("regr.ranger"), lrn("regr.kknn")) %>>% po("regravg")
+
+meangraph$plot(html = TRUE)
+```
+```{r, warning = FALSE}
+rr = resample(task, meangraph, cv10_instance, store_model = TRUE)
+rr$aggregate(msr("regr.mae"))
+```
+
+## Stacking
+
+- Instead of just mean-aggregating predictions, we build a model on the predictions of learners
+- This needs the `"learner_cv"` PipeOp, because predictions need to be available during training already
+  - the `"learner_cv"` PipeOp performs crossvalidation during the training phase and emits the cross validated predictions.
+```{r}
+stackgraph = robustimp %>>%
+  list(po("learner_cv", id = "stack_lm", robustify %>>% lrn("regr.lm")),
+    po("learner_cv", lrn("regr.ranger")),
+    po("learner_cv", lrn("regr.kknn"))) %>>%
+  po("featureunion", id = "fu2") %>>% lrn("regr.lm")
+
+stackgraph$plot(html = TRUE)
+```
+
+```{r, warning = FALSE}
+rr = resample(task, stackgraph, cv10_instance, store_model = TRUE)
+rr$aggregate(msr("regr.mae"))
+```
+
+# Your Ideas!
+
+- Try different methods for preprocessing and training
+- Some hints:
+  - It is not allowed to have two `PipeOp`s with the same `ID` in a `Graph`. Initialize a `PipeOp` with `po("...", id = "xyz")` to change its ID on construction
+  - Don't build too large `Graph`s involving complicated optimizations, like too many `"learner_cv"`--they need a long time to train
+  - Use the `affect_columns` parameter if you want a `PipeOp` to only operate on part of the data. Use `po("select")` if you want to remove certain columns (possibly only along a single branch of multiple parallel branches). Both take `selector_XXX()` arguments, e.g. `selector_type("integer")`
+  - You may get the best performance if you actually inspect the features and see what kind of transformations work best for them.
+  - See what `PipeOp`s are available by inspecting `mlr_pipeops$keys()`, and get help about them using `?mlr_pipeops_XXX`.
+
+# Demo Submission
+
+- How we constructed our stacking model
+```{r, warning = FALSE}
+imputer = po("imputemedian") %>>% po("imputenewlvl")
+
+impandmiss = gunion(list(imputer, po("select", selector = selector_type("integer")) %>>%
+  po("missind"))) %>>%
+  po("featureunion")
+
+robustify = po("fixfactors") %>>% po("imputesample") %>>% po("removeconstants")
+robustimp = impandmiss %>>% robustify
+
+stackgraph = robustimp %>>%
+  list(po("learner_cv", id = "stack_lm", robustify %>>% lrn("regr.lm")),
+    po("learner_cv", lrn("regr.ranger")),
+    po("learner_cv", lrn("regr.kknn"))) %>>%
+  po("featureunion", id = "fu2") %>>% lrn("regr.lm")
+
+resample(task, stackgraph, cv10_instance, store_model = TRUE)$aggregate(msr("regr.mae"))
+```
+- Training it on the whole dataset and creating a prediction submission
+```{r, warning = FALSE}
+test_set = read.csv("data/ames_housing_test_original.csv")
+
+final_learner = GraphLearner$new(stackgraph)$train(task)
+
+pred = final_learner$predict_newdata(task, test_set)
+pred = as.data.table(pred)
+pred$truth = NULL
+write.csv(pred, "data/ames_housing_submission_day3.csv", row.names = FALSE)
+```
