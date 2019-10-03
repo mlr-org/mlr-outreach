@@ -5,9 +5,9 @@
 
 ## Tutors and Helpers:
 
-– Prof Bernd Bischl
-– Martin Binder
-– Dr. Giuseppe Casalicchio
+- Prof Bernd Bischl
+- Martin Binder
+- Dr. Giuseppe Casalicchio
 
 ## Schedule
 
