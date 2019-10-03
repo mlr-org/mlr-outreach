@@ -3,7 +3,8 @@
 ## Dates:
 06/11/2019 - 07/11/2019
 
-## Tutors and helpers:
+## Tutors and Helpers:
+
 – Prof Bernd Bischl
 – Martin Binder
 – Dr. Giuseppe Casalicchio
