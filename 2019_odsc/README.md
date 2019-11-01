@@ -7,13 +7,17 @@ Link to this Page: **tiny.cc/mlr3_odsc**
 
 ## Set up your Session!
 
-* Remote:
+### Remote
+
+Easy: Run examples on RStudio Cloud. Everything is installed and was tested before, so it should work. You need to sign up for an account.
 
 [rstudio.cloud](rstudio.cloud) TODO
 
-* Local:
+### Local
 
-(load this page from the link above and copy-paste this in your R session)
+Run examples on your machine. For this you have to make sure your packages are installed and updated. Can't be guaranteed to work.
+
+Load this page from the link above and copy-paste this in your R session:
 
 ```r
 packages_cran = c(
