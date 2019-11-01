@@ -1,7 +1,7 @@
 
 # mlr: Machine Learning in R <img src="mlr.png" align="right" />
 
-November 01, 2019. 11:00 - 12:30
+November 01, 2019; 11:00 - 12:30
 
 Link to this Page: **tiny.cc/mlr3_odsc**
 
