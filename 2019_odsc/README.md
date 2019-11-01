@@ -11,7 +11,7 @@ Link to this Page: **tiny.cc/mlr3_odsc**
 
 Easy: Run examples on RStudio Cloud. Everything is installed and was tested before, so it should work. You need to sign up for an account, then open the project: https://rstudio.cloud/project/673661
 
-### Local
+### Alternatively: Local
 
 Run examples on your machine. For this you have to make sure your packages are installed and updated. Can't be guaranteed to work.
 
