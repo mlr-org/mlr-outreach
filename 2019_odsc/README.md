@@ -3,7 +3,7 @@
 
 Time: 11:00 - 12:30
 
-Link to this Page: **tiny.cc/mlr_odsc**
+Link to this Page: **tiny.cc/mlr3_odsc**
 
 ## Set up your Session!
 
