@@ -1,0 +1,326 @@
+---
+title: "mlr3tuning Demo"
+output:
+  html_document:
+    toc: TRUE
+---
+
+```{r, include = FALSE}
+# Just some preparation
+knitr::opts_chunk$set(
+  cache = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+data.table::setDTthreads(1)
+options(width=110)
+set.seed(20191101)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+# Intro
+
+In this case we will continue working with the **German Credit Dataset**. Before we peeked into the data set by using and comparing some learners with ther default parameters. We will now see how to:
+
+- Tune hyperparameters for a given problem
+- Perform nested resampling
+
+# Prerequisites
+
+```{r, message=FALSE, warning=FALSE}
+library("data.table")
+library("mlr3")
+library("mlr3learners")
+library("ggplot2")
+theme_set(theme_light())
+```
+
+We use the same data as before.
+
+```{r, message=FALSE}
+# load the data set (id 31) from OpenML Library, clean it up and convert it
+# to a TaskClassif.
+credit = readRDS("credit.rds")
+task = TaskClassif$new("GermanCredit", credit, "class")
+```
+Also, because tuning often takes a long time, we want to make more efficient use of our multicore CPUs. This breaks on rstudio cloud! Uncomment the line if you are running this locally.
+```{r, warning=FALSE}
+# future::plan("multiprocess")
+```
+
+## Evaluation
+
+We evaluate all algorithms using 10-fold cross-validation. We use a *fixed* train-test split, i.e. the same splits for each evaluation. Otherwise, some evaluation could get unusually "hard" splits, which would make comparisons unfair.
+
+```{r}
+set.seed(20191101)
+cv10_instance = rsmp("cv", folds = 10)$instantiate(task)
+```
+
+# Simple Parameter Tuning
+
+- Use the `paradox` package for search space definition
+- Use the `mlr3tuning` package for tuning
+```{r}
+library("mlr3tuning")
+library("paradox")
+```
+
+## Search Space and Prolem Definition
+
+- First need to decide what `Learner` to optimize.
+  - (We could also try to optimize multiple `Learner`s simultaneously, i.e. choose the `Learner` to use automatically. We get to that in Day 3)
+  - We use `"classif.kknn"`, the "kernelized" k-nearest neighbor classifier
+- Then we decide what parameters we optimize over
+  - What are our options?
+```{r}
+knn = lrn("classif.kknn", predict_type = "prob")
+print(knn$param_set)
+```
+- We will use `kknn` as a normal kNN without weighting first:
+```{r}
+knn$param_set$values$kernel = "rectangular"
+```
+- We use the `paradox` package to define a search space. See [Appendix](#very-quick-paradox-primer) for a short list of possible parameter types.
+- At first we tune the `k` parameter from 10 to 20, as well as the distance function (L1 or L2).
+```{r}
+searchspace = ParamSet$new(list(
+  ParamInt$new("k", lower = 3, upper = 20),
+  ParamInt$new("distance", lower = 1, upper = 2)
+))
+```
+
+- We define a "tuning instance" that represents the problem we are trying to optimize.
+  - What is the task we are optimizing for?
+  - What learner are we using?
+  - How do we do resampling?
+  - What is the performance measure?
+  - What is the search space ("parameter set")?
+  - When are we done searching? (Disregard this for now).
+
+```{r}
+instance_grid = TuningInstance$new(
+  task = task,
+  learner = knn,
+  resampling = cv10_instance,
+  measures = msr("classif.ce"),
+  param_set = searchspace,
+  terminator = term("none")
+)
+```
+
+## Grid Search
+
+- The `mlr_tuners` dictionary contains the tuning algorithms currently implemented; access them with the `tnr()` quick access function.
+```{r}
+mlr_tuners
+```
+
+- A simple tuning method is to try all possible combinations of parameters: **Grid Search**
+  - Pro: Very intuitive and simple
+  - Con: Inefficient if the search space is large
+- We get the `"grid_search"` tuner for this
+```{r}
+tuner_grid = tnr("grid_search", resolution = 18, batch_size = 36)
+```
+- Tuning works by calling `$tune()`. Note that it *modifies* our "tuning instance"--the result can be found in the `instance` object.
+- Be aware that tuning can 
+```{r}
+tuner_grid$tune(instance_grid)
+```
+- The result can be found in the `$result` slot. We can also plot the performance.
+```{r}
+instance_grid$result
+```
+
+- We can look at the "archive" of evaluated configurations
+- We expand the "params" (the parameters that the `Learner` actually saw)
+```{r}
+perfdata = instance_grid$archive("params")
+perfdata[, .(nr, k, distance, classif.ce)]
+```
+
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = as.factor(distance))) +
+  geom_line() + geom_point(size = 3)
+```
+
+- Euclidean distance (`distance` = 2) seems to work better, but there is much randomness introduced by the resampling instance, so you may see a different result!
+- `k` between 5 and 10 perform well
+
+## Transformation
+
+- Let's look at a larger search space. How about we allow a higher upper limit for `k`.
+- **Problem**: The difference between `k` = 3 and `k` = 4 is probably larger than the difference between `k` = 49 and `k` = 50.
+  - We will use a **transformation function** and sample on the log-space.
+  - For this we define the range for `k` from `log(3)` to `log(50)` and exponentiate in the transformation.
+	- We must use `ParamDbl` instead of `ParamInt` now!
+```{r}
+large_searchspace = ParamSet$new(list(
+  ParamDbl$new("k", lower = log(3), upper = log(50)),
+  ParamDbl$new("distance", lower = 1, upper = 3)
+))
+
+large_searchspace$trafo = function(x, param_set) {
+  x$k = round(exp(x$k))
+  x
+}
+```
+```{r}
+instance_random = TuningInstance$new(
+  task = task,
+  learner = knn,
+  resampling = cv10_instance,
+  measures = msr("classif.ce"),
+  param_set = large_searchspace,
+  terminator = term("evals", n_evals = 36)
+)
+```
+```{r}
+tuner_grid$tune(instance_random)
+```
+
+- We can get the "archive" in two ways: expand the `"tune_x"` parameters (the points we sampled on the search space), and the `"params"` parameters: the points the `Learner` was used with---these are the `exp()`'d parameters!
+```{r}
+perfdata = instance_random$archive("tune_x")
+perfdata[, c("k", "distance", "classif.ce")]
+```
+
+```{r}
+perfdata = instance_random$archive("params")
+perfdata[, c("k", "distance", "classif.ce")]
+```
+
+Let's look at some plots of performance by parameter.
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = distance)) +
+  geom_point(size = 3)
+```
+
+# Tuning Results and Nested Resampling
+- What performance do we expect from our tuned method?
+- Naive evaluation:
+```{r}
+instance_grid$result$perf
+```
+
+- Problem: *overtuning*:
+  - The more we search, the more our result is likely to just be "lucky" on your tuning data.
+  - Imagine predicting random values and "tuning" the seed value. If we try enough seeds we may get good (tuning set) performance!
+  - Different search spaces or search methods may introduce different amounts of randomness, so even the comparison is flawed.
+- Solution: Nested Resampling
+
+## Nested Resampling
+
+- Let's act like our tuning method is actually a `Learner`!
+- `$train()` method:
+  - Tune hyperparameters on the training data
+  - Train a model with optimal hyperparameters on training data
+- `$predict()` method: use model trained on training data as model
+- This is just the workflow we use when tuning hyperparameters: Find the best parameters and use them for training.
+- The `AutoTuner` does exactly this.
+
+```{r}
+grid_auto = AutoTuner$new(
+  learner = knn,
+  resampling = rsmp("cv", folds = 10),  # we can NOT use fixed resampling here
+  measures = msr("classif.ce"),
+  tune_ps = searchspace,
+  terminator = term("none"),
+  tuner = tnr("grid_search")
+)
+```
+
+- The autotuner behaves just like a `Learner`. It can be used to combine the steps of hyperparameter tuning and model fitting, but is especially useful for resampling and fair comparison of performance through benchmarking.
+```{r}
+resample(task, grid_auto, cv10_instance)$aggregate()
+```
+
+# Appendix
+
+## Example: Tuning With Larger Budget
+
+It is always interesting to look at what could have been. The following dataset contains an optimization run result with 3600 evaluations. It was generated using
+
+```{r, eval = FALSE}
+tuner_random = tnr("random_search", batch_size = 36)
+
+instance_random = TuningInstance$new(
+  task = task,
+  learner = knn,
+  resampling = cv10_instance,
+  measures = msr("classif.ce"),
+  param_set = large_searchspace,
+  # lower the n_evals value in the following line to try shorter
+  # random search tuning runs
+  terminator = term("evals", n_evals = 3600)
+)
+tuner_random$tune(instance_random)
+
+perfdata = instance_random$archive("params")
+```
+
+Instead of running the above, which takes quite a while, we load a saved dataset.
+```{r}
+perfdata = readRDS("randomsearch_3600.rds")
+```
+- The scale effect is just as visible.
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = scale)) +
+  geom_point(size = 2, alpha = 0.3)
+```
+- There seems to be a pattern by kernel as well...
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel)) +
+  geom_point(size = 2, alpha = 0.3)
+```
+- In fact, if we zoom in to `(5, 30)` x `(0.2, 0.3)` and do loess smoothing we see that different kernels have their optimum at different `k`.
+```{r, warning=FALSE}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel,
+  group = interaction(kernel, scale))) +
+  geom_point(size = 2, alpha = 0.3) + geom_smooth() +
+  xlim(5, 30) + ylim(0.2, 0.3)
+```
+- What about the `distance` parameter? If we select all results with `k` between 10 and 20 and plot distance and kernel we see an approximate relationship
+```{r, warning=FALSE}
+ggplot(perfdata[k > 10 & k < 20 & scale == TRUE],
+  aes(x = distance, y = classif.ce, color = kernel)) +
+  geom_point(size = 2) + geom_smooth()
+```
+- Observations:
+  - The `scale` makes a lot of difference
+  - The `distance` seems to make the least difference
+  - Had we done grid search, we would have wasted a lot of evaluations on trying different `distance` values that usually give similar results. This is why random search works well.
+  - An even more intelligent approach would be to observe that `scale = FALSE` performs badly and not try out so many points with that one.
+
+## Very quick `paradox` primer
+
+Initialization:
+```{r, eval = FALSE}
+ParamSet$new(list( <PARAMETERS> ))
+```
+Possible parameter types:
+```{r, eval = FALSE}
+# - logical (values TRUE, FALSE)
+ParamLgl$new("parameter_id")
+# - factorial (discrete values from a list of 'levels')
+ParamFct$new("parameter_id", c("value1", "value2", "value3"))
+# - integer (from 'lower' to 'upper' bound)
+ParamInt$new("parameter_id", lower = 0, upper = 10)
+# - numeric (from 'lower' to 'upper' bound)
+# - unfortunately named after the storage type, "double precision floating point"
+ParamDbl$new("parameter_id", lower = 0, upper = 10)
+
+# Also possible: "untyped", but we can not tune with this!
+ParamUty$new("parameter_id")
+```
+
+So an example parameter set with one logical parameter `"flag"` and one integer parameter `"count"`:
+```{r}
+ParamSet$new(list(
+  ParamLgl$new("flag"),
+  ParamInt$new("count", lower = 0, upper = 10)
+))
+```
+
+See the [online vignette](https://mlr3book.mlr-org.com/paradox.html) of `paradox` for a more complete introduction.

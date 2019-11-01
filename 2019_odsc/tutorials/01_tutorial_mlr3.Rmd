@@ -1,0 +1,392 @@
+---
+title: "mlr3 Demo"
+output:
+  html_document:
+    toc: TRUE
+---
+
+```{r, include = FALSE, warning = FALSE, message = FALSE}
+# Just some preparation
+knitr::opts_chunk$set(
+  cache = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+if (require("data.table")) data.table::setDTthreads(1)
+options(width = 110)
+set.seed(20191101)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+# Intro
+
+**mlr3** is a machine learning framework for R. Together with other packages from the same developers, mostly following the naming scheme "mlr3___", it offers functionality around developing, tuning, and evaluating machine learning workflows.
+
+We will walk through this tutorial interactively. The text is kept short to be followed in real time. There are links to the [Appendix](#appendix) for further information that you can read in your spare time.
+
+# Prerequisites
+
+If you run this tutorial on your laptop, you should make sure all packages used in this tutorial are installed. This includes packages from the `mlr3` family.
+
+This is *not* necessary in rstudio cloud sessions that were prepared for this course!
+
+```{r, message=FALSE, warning=FALSE, eval = FALSE}
+# install from CRAN
+packages_cran = c(
+    "data.table", "ggplot2", "rpart.plot", "visNetwork",
+    "kknn", "MASS", "ranger",
+    "future", "future.apply")
+to_install = setdiff(packages_cran, installed.packages()[,"Package"])
+if (length(to_install)) install.packages(to_install)
+
+mlr3_pkgs <- c("mlr3misc", "paradox", "mlr3", "mlr3filters",
+  "mlr3learners", "mlr3pipelines", "mlr3tuning")
+# always re-install these
+install.packages(mlr3_pkgs)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library("data.table")
+library("mlr3")
+library("mlr3learners")
+library("ggplot2")
+theme_set(theme_light())
+```
+
+# Machine Learning Use Case: German Credit Data
+
+- The German credit data is a research data set of the University of Hamburg from 1994 donated by Prof. Hans Hoffman.
+- Description (and manual download) can be found at the [UCI repository](https://archive.ics.uci.edu/ml/datasets/Statlog+%28German+Credit+Data%29).
+- Goal is to classify people by their credit risk (**good** or **bad**) using 20 features:
+  - `checking_status:          status/balance of checking account at this bank`
+  - `duration:                 duration of the credit in months`
+  - `credit_history:           past credit history of applicant at this bank`
+  - `purpose:                  reason customer is applying for a loan`
+  - `credit_amount:            amount asked by applicant`
+  - `savings_status:           savings accounts/bonds at this bank`
+  - `employment:               present employment since`
+  - `installment_commitment:   installment rate in percentage of disposable income`
+  - `personal_status:          combination of sex and personal status of applicant`
+  - `other_parties:            other debtors/guarantors present?`
+  - `residence_since:          present residence since`
+  - `property_magnitude:       properties that applicant has`
+  - `age:                      age in years`
+  - `other_payment_plans:      other installment plans the applicant is paying`
+  - `housing:                  type of apartment: rented, owned, for free / no payment`
+  - `existing_credits:         number of existing credits at this bank`
+  - `job:                      current job information`
+  - `num_dependents:           number of people being liable to provide maintenance`
+  - `own_telephone:            is there any telephone registered for this customer?`
+  - `foreign_worker:           is applicant foreign worker?`
+
+## Importing the data
+
+We load the dataset from disk. The dataset can also be found on OpenML under https://www.openml.org/d/31
+
+```{r, message=FALSE}
+credit = readRDS("credit.rds")
+```
+
+# Modeling
+Considering how we are going to tackle the problem relates closely to what `mlr3` entities we will use.
+
+- What is the problem we are trying to solve?
+  - i.e. what **Task** do we use?
+  - Binary classification.
+  - $\Rightarrow$ We use `TaskClassif`.
+- What are appropriate learning algorithms?
+  - i.e. what **Learner** do we use?
+  - Logistic regression, CART, Random Forest
+  - $\Rightarrow$ `lrn("classif.log_reg")`, `lrn("classif.rpart")`, `lrn("classif.ranger")`
+- How do we evaluate "good" performance? $\Rightarrow$ Depends on many things! Cost of false positive vs. false negative, legal requirements, ...
+  - i.e. what **Measure** do we use?
+  - We start with misclassification error (simle!) and will also consider AUC.
+  - $\Rightarrow$ `msr("classif.ce")`, `msr("classif.auc")`
+
+## Task Definition
+
+With `TaskClassif$new()`, we can initialize a classification task. 
+We need to specify a name for the task, the data we want to use and name of the target variable (here `"class"`):
+```{r}
+task = TaskClassif$new("GermanCredit", credit, "class")
+```
+
+## Learner Definition
+
+You need to install and load the `mlr3learners` package to get access to a wide range of learners.
+All available `Learner`s can be obtained by:
+
+```{r}
+mlr_learners
+```
+
+A learner can be initialized with the `lrn` function and the name of the learner (e.g., `lrn("classif.xxx")`). Use `?mlr_learners_xxx` to open the help page of a learner named `xxx`, or use [the internet](https://mlr3learners.mlr-org.com/reference/index.html).
+
+## Model Fitting: Logistic Regression
+
+- The `Learner` for logistic regression uses R's `glm()` function and is provided by the `mlr3learners` package.
+```{r}
+learner_logreg = lrn("classif.log_reg")
+```
+- Model fitting is easy, the resulting model is stored in the `$model` slot.
+```{r}
+learner_logreg$train(task)
+```
+- Inspecting the model. It is the result returned by `glm()` and can be inspected as such.
+```{r}
+summary(learner_logreg$model)
+```
+
+## Model Fitting: Decision Tree
+
+- Same procedure as before
+- We fit a decision tree with depth 3 for nicer plots that are easier to interprete.
+```{r}
+learner_cart = lrn("classif.rpart", maxdepth = 3)
+learner_cart$train(task)
+```
+- The `rpart.plot` library gives expressive plots for the splits:
+```{r}
+rpart.plot::rpart.plot(learner_cart$model)
+```
+
+## Model Fitting: Random Forest
+
+- Same procedure as before
+- We let the model store the variable importance (`importance = "permutation"`) 
+```{r}
+learner_rf = lrn("classif.ranger", importance = "permutation")
+learner_rf$train(task)
+```
+- We can access the importance values using `$importance()`
+```{r, R.options=list(width = 120)}
+learner_rf$importance()
+```
+- We convert the importance into a `data.table` so we can plot it
+```{r}
+importance = as.data.table(learner_rf$importance(), keep.rownames = TRUE)
+colnames(importance) = c("Feature", "Importance")
+importance
+
+ggplot(importance, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col() + coord_flip() + xlab("")
+```
+
+# Prediction
+
+- A model, once trained, can be used to predict outcomes from new data.
+- We simulate new data by sampling from the credit data.
+```{r, R.options=list(width = 120)}
+# Just generate *some* prediction data for this demo!
+
+# For each variable, we randomly sample 3 values with replacement
+newdata = as.data.table(lapply(credit, sample, size = 3, replace = TRUE))
+# we remove the "class" column
+newdata$class = NULL
+
+print(newdata)
+```
+- Let's see what the models predict
+```{r}
+pred_logreg = learner_logreg$predict_newdata(newdata)
+pred_cart = learner_cart$predict_newdata(newdata)
+pred_rf = learner_rf$predict_newdata(newdata)
+
+pred_logreg
+pred_cart
+pred_rf
+```
+
+- The `predict()` function actually gives a `Prediction` object. It can be converted to a `data.table`, as well as inspected for other things.
+
+```{r}
+pred = learner_rf$predict_newdata(newdata)
+
+head(as.data.table(pred))
+
+pred$confusion
+```
+
+- The predictions may disagree, but which do we trust most? We should do [Performance Evaluation](#performance-evaluation) and [benchmarks](#performance-comparison-and-benchmarks)!
+
+## Probability Prediction
+
+- Learners may not only predict a class variable ("response"), but also their degree of "belief" / uncertainty in a given response.
+- We achieve this by setting the `$predict_type` slot to `"prob"`.
+- Sometimes this needs to be done *before* the learner is trained.
+- Alternatively, we can directly create the learner with this option: `lrn("classif.log_reg", predict_type = "prob")`
+```{r}
+learner_logreg$predict_type = "prob"
+```
+```{r}
+learner_logreg$predict_newdata(newdata)
+```
+- Sometimes, you need to be careful when interpreting these values as probabilities!
+
+# Performance Evaluation
+
+To measure the performance of a learner on new unseen data, we usually mimic the scenario of unseen data by splitting up the data into training and test set.
+The training set is used for training the learner, and the test set is only used for predicting and evaluating the performance of the trained learner.
+Many resampling methods (cross-validation, bootstrap) repeat the splitting process in different ways.
+
+- We need to specify the resampling scheme using the `rsmp()` function:
+```{r}
+resampling = rsmp("holdout", ratio = 2/3)
+print(resampling)
+```
+
+- We use `resample()` to do the resampling calculation:
+```{r}
+res = resample(task, learner_logreg, resampling)
+res$aggregate()
+```
+- The default score of the measure is included in the `$aggregate()` slot:
+```{r}
+res$aggregate()
+```
+
+- the resampling result can also be converted to `data.table`
+```{r}
+as.data.table(res)
+```
+
+- We can easily do differend resampling schemes, e.g. repeated holdout (`"subsampling"`), or cross validation.
+- Most methods do repeated train/predict cycles on different data subsets and aggregate the result (usually as the `mean()`).
+- If we were to do this manually we would have to write loops.
+```{r}
+res_sub = resample(task, learner_logreg, rsmp("subsampling", repeats = 10))
+res_sub$aggregate()
+```
+```{r}
+res_cv = resample(task, learner_logreg, rsmp("cv", folds = 10))
+res_cv$aggregate()
+```
+- We can also calculate scores for different measures (e.g., `msr("classif.fpr")` for the false positive rate).
+```{r}
+# false positive rate
+res_cv$aggregate(msr("classif.fpr"))
+
+# false positive rate and false negative
+msr_list = list(
+  msr("classif.fpr"),
+  msr("classif.fnr")
+)
+res_cv$aggregate(msr_list)
+```
+
+## Performance Evaluation: Outlook
+
+There are a few more resampling methods, and quite a few more measures. List them in
+```{r}
+mlr_resamplings
+```
+```{r}
+mlr_measures
+```
+To get help on a resampling method, use `?mlr_resamplings_xxx`, for a measure do `?mlr_measures_xxx`. you can also use the [mlr3 reference](https://mlr3.mlr-org.com/reference/index.html) online.
+
+Some measure, for example `"auc"`, require a "probability" prediction, instead of a response prediction, see [**Probability Prediction**](#probability-prediction).
+
+# Performance Comparison and Benchmarks
+
+- We could compare `Learners` by evaluating `resample()` for each of them manually.
+- `benchmark()` automatically performs resampling evaluations for multiple learners and tasks.
+- Create fully crossed designs using `benchmark_grid()`: multiple `Learner`s **x** multiple `Task`s **x** multiple `Resampling`s
+```{r}
+lrn_list = list(
+  lrn("classif.log_reg", predict_type = "prob"),
+  lrn("classif.rpart", predict_type = "prob"),
+  lrn("classif.ranger", predict_type = "prob")
+)
+
+bm_design = benchmark_grid(task = task, resamplings = rsmp("cv", folds = 10), learners = lrn_list)
+```
+- Careful, large benchmarks may take a long time! This one should take less than a minute, however.
+- In General, we want use *parallelization* to speed things up on multicore machines. This breaks on rstudio cloud! Uncomment the line if you are running this locally.
+```{r}
+# future::plan("multiprocess")
+```
+```{r}
+bmr = benchmark(bm_design)
+```
+- We can compare different measures. We compare misclassification rate and AUC.
+```{r}
+msr_list = list(msr("classif.ce"), msr("classif.auc"))
+performances = bmr$aggregate(msr_list)
+performances[, c("learner_id", "classif.ce", "classif.auc")]
+```
+
+# Outlook
+
+- How did we do? We can check the [OpenML](https://www.openml.org/t/31) website for performances of other machine learning methods.
+  - We see `ranger` is among the top methods
+- Things we have not done that should be considered:
+  - We have worked with default hyperparameters, but we may want to see if tuning them helps (Day 2)
+  - Some preprocessing and feature extraction steps may sometimes be helpful (Day 3)
+
+# Appendix
+
+## R Pro Tips
+
+* What are possible argument values of `lrn()`, `tsk()`, etc. again? -> Think about the corresponding dictionary
+```{r}
+mlr_learners$keys()
+
+mlr_tasks$keys()
+
+mlr_measures$keys()
+
+mlr_resamplings$keys()
+```
+
+* What are the arguments of a `$new()` constructor?
+```{r}
+formals(TaskClassif$public_methods$initialize)
+```
+
+* What are the possible slots and functions of an object?
+
+```{r}
+# Writing `prediction$`, and pressing <TAB> should work.
+# Otherwise:
+names(pred_rf)
+
+# try names without `()` first
+# and see if it is a function
+```
+
+* How do I see the help file of an object
+
+```{r}
+# The documentation is organized by object classes
+class(pred_rf)
+
+# use ?PredictionClassif, ?Prediction etc.
+# Try all elements listed in the class
+```
+
+## mlr3 and its Extensions
+
+| Package | Functionality |
+| :-      | :------------ |
+| `mlr3`  | Framework for machine learning: `Task`, `Learner`, `resample()` and `benchmark()` |
+| `mlr3learners` | Concrete `Learner`s for many popular machine learning implementations |
+| `mlr3pipelines` | Dataflow programming of machine learning workflows. |
+| `mlr3tuning` | Hyperparameter tuning for machine learning algorithms. |
+| `mlr3filter` | Feature filtering |
+| `paradox` | Auxiliary package providing (hyper)parameter handling |
+| `mlr3misc` | Auxiliary functions |
+
+## Packages
+
+The non-`mlr3` packages we use:
+
+| Package | Reason       |
+| :-      | :----------- |
+| `data.table` | This provides a more efficient and versatile replacement for the `data.frame` datatype built into R. [Intro vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html) |
+| `ggplot2` | A very powerful plotting tool. [Overview with link to "cheat sheets"](https://ggplot2.tidyverse.org/) |
+| `future` | Parallelization to make use of multicore functionality. [GitHub page](https://github.com/HenrikBengtsson/future) |
+| `rpart.plot` | Plotting CART trees. [Website](http://www.milbo.org/rpart-plot/) |
+| `kknn` | Provides the `"*.kknn"` `Learner`s. k-nearest neighbor classification / regression is a classical machine learning technique. |
+| `MASS` | Provides the `"*.lda"` and `"*.qda"` `Learner`s. |
+| `ranger` | Provides the `"*.ranger"` `Learner`s. This is an implementation of the powerful "Random Forest" algorithm, which often works very well, even without parameter tuning. |
