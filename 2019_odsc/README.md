@@ -9,9 +9,7 @@ Link to this Page: **tiny.cc/mlr3_odsc**
 
 ### Remote
 
-Easy: Run examples on RStudio Cloud. Everything is installed and was tested before, so it should work. You need to sign up for an account.
-
-[rstudio.cloud](rstudio.cloud) TODO
+Easy: Run examples on RStudio Cloud. Everything is installed and was tested before, so it should work. You need to sign up for an account, then open the project: https://rstudio.cloud/project/673661
 
 ### Local
 
