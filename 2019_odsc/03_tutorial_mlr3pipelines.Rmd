@@ -1,0 +1,229 @@
+---
+title: "mlr3pipelines Demo"
+output:
+  html_document:
+    toc: TRUE
+---
+
+```{r, include = FALSE}
+# Just some preparation
+knitr::opts_chunk$set(
+  cache = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+data.table::setDTthreads(1)
+options(width=110)
+set.seed(20191101)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+# Intro
+
+In this case we will continue working with the **German Credit Dataset**. We already used different `Learner`s on it and tried to optimize their hyperparameters. Now we will
+
+- preprocess the data as an integrated step of the model fitting process
+- tune the preprocessing parameters
+- use multiple `Learners` in as an *ensemble* model
+
+# Prerequisites
+
+```{r, message=FALSE, warning=FALSE}
+library("data.table")
+library("mlr3")
+library("mlr3learners")
+library("ggplot2")
+theme_set(theme_light())
+library("mlr3tuning")
+```
+
+We use the same data as before. To make things interesting, we introduce *missing values* in the dataset.
+
+```{r, message=FALSE}
+# load the data set (id 31) from OpenML Library, clean it up and convert it
+# to a TaskClassif.
+credit_full = readRDS("credit.rds")
+set.seed(20191101)
+credit = credit_full[, lapply(.SD, function(x)
+  x[sample(c(TRUE, NA), length(x), replace = TRUE, prob = c(.9, .1))])]
+credit$class = credit_full$class
+task = TaskClassif$new("GermanCredit", credit, "class")
+
+task$head()
+```
+
+- We instantiate a resampling instance for this task to be able to compare resampling performance.
+```{r}
+set.seed(20191101)
+cv10_instance = rsmp("cv")$instantiate(task)
+```
+
+Uncomment the following line if you are running this locally.
+```{r, warning=FALSE}
+# future::plan("multiprocess")
+```
+
+# Intro
+
+In this tutorial we will take a look at composite machine learning algorithms that may incorporate data preprocessing or the combination of multiple `Learner`s ("ensemble methods").
+
+- The package we use is **mlr3pipelines**, which enables us to chain "`PipeOp`" objects into data flow graphs. Load the package using
+```{r}
+library("mlr3pipelines")
+```
+
+- Available `PipeOp`s are enumareted in the `mlr_pipeops` dictionary.
+
+```{r}
+mlr_pipeops
+```
+
+# Missing Value Imputation
+
+- Trying to train a Random Forest fails because the model can not handle missing values.
+```{r, error = TRUE}
+ranger = lrn("classif.ranger")
+
+ranger$train(task)
+```
+
+- We can impute using a `PipeOp`. What are the imputation `PipeOp`s?
+```{r}
+mlr_pipeops$keys("^impute")
+```
+
+- We can impute numeric features by their median, and factor features by introducing a new level.
+```{r}
+imp_ranger = GraphLearner$new(
+  po("imputemean") %>>% po("imputenewlvl") %>>% ranger)
+
+imp_ranger$train(task)
+```
+
+# Robustify: Preventing new Prediction Factor Levels and other Problems
+
+- When training with a small datasset it is possible that not all possible factor levels are visible to the `Learner`
+```{r, error = TRUE}
+logreg = lrn("classif.log_reg")
+logreg$train(task$clone()$filter(1:200))
+logreg$predict(task)
+```
+- Many `Learner`s can not handle new levels during prediction $\Rightarrow$ we use the `"fixfactors"` `PipeOp` to prevent that
+- `"fixfactors"` introduces `NA` values; we may need to impute afterwards.
+  - $\Rightarrow$ We use `"imputesample"`, but with `affect_cols` set to only *factorial* features.
+
+- Columns that are all-constant may also be a problem
+```{r, error = TRUE}
+logreg = lrn("classif.log_reg")
+logreg$train(task$clone()$filter(1:2))
+```
+
+- This can be fixed using `"removeconstants"`
+- We get the following imputation + robustification pipeline:
+```{r}
+robustify = po("imputemean") %>>% po("imputenewlvl") %>>%
+  po("fixfactors") %>>%
+  po("removeconstants") %>>%
+  po("imputesample", affect_columns = selector_type(c("ordered", "factor")))
+```
+
+- What does this `Graph` look like? We can plot it!
+```{r}
+robustify$plot(html = TRUE)
+```
+
+```{r}
+roblogreg = GraphLearner$new(robustify %>>% logreg)
+
+roblogreg$train(task$clone()$filter(1:2))
+roblogreg$predict(task)
+```
+
+# Feature Filtering
+
+- Sometimes having less features is desirable (interpretability, cost of acquiring data)
+- Use *feature filter* to preferentially keep features with most information
+```{r}
+library("mlr3filters")
+mlr_filters
+filter = flt("importance", learner =
+  lrn("classif.ranger", num.trees = 100, importance = "impurity"))
+
+filter$calculate(robustify$train(task)[[1]])$scores
+```
+- What is the tradeoff between features and performance? Let's find out by tuning.
+- We incorporate our filtering in the pipeline using the `"filter"` `PipeOp`
+```{r}
+fpipe = robustify %>>%
+  po("filter", filter, filter.nfeat = 4)
+
+fpipe$train(task)[[1]]$head()
+```
+
+- To tune this, we need to change the `importance.filter.nfeat` parameter.
+```{r}
+library("paradox")
+searchspace = ParamSet$new(list(
+  ParamInt$new("importance.filter.nfeat", lower = 1, upper = length(task$feature_names))
+))
+```
+- Because this is only one parameter, we will use grid search. For higher dimensions, random search is more appropriate.
+```{r}
+inst = TuningInstance$new(
+  task, fpipe %>>% lrn("classif.ranger"), cv10_instance, msr("classif.ce"),
+  searchspace, term("none")
+)
+tuner = tnr("grid_search", resolution = 5)
+```
+
+```{r, warning = FALSE}
+tuner$tune(inst)
+```
+```{r}
+arx = inst$archive("params")
+ggplot(arx, aes(x = importance.filter.nfeat, y = classif.ce)) + geom_line()
+```
+
+# Stacking
+
+- We build a model on the predictions of learners
+- This needs the `"learner_cv"` PipeOp, because predictions need to be available during training already
+  - the `"learner_cv"` PipeOp performs crossvalidation during the training phase and emits the cross validated predictions.
+- We use `"prob"` prediction because it carries more information than response prediction
+```{r}
+stackgraph = robustify %>>%
+  list(
+    po("learner_cv", lrn("classif.ranger", predict_type = "prob")),
+    po("learner_cv", lrn("classif.kknn", predict_type = "prob"))) %>>%
+  po("featureunion") %>>% lrn("classif.log_reg")
+
+stackgraph$plot(html = TRUE)
+```
+
+```{r, warning = FALSE}
+rr = resample(task, stackgraph, cv10_instance, store_model = TRUE)
+rr$aggregate()
+```
+
+- we can look at a resampling model and see how "important" each of the stacked model was
+```{r}
+summary(rr$learners[[1]]$model$classif.log_reg$model)
+```
+- Each of the individual `Learner`s does not perform as well
+```{r}
+bmr = benchmark(data.table(task = list(task),
+  learner = list(GraphLearner$new(robustify %>>% lrn("classif.ranger")),
+    GraphLearner$new(robustify %>>% lrn("classif.kknn")),
+    GraphLearner$new(robustify %>>% lrn("classif.log_reg"))),
+  resampling = list(cv10_instance)))
+bmr$aggregate()[, c("learner_id", "classif.ce")]
+```
+
+# Your Ideas!
+
+- Try different methods for preprocessing and training
+- Some hints:
+  - It is not allowed to have two `PipeOp`s with the same `ID` in a `Graph`. Initialize a `PipeOp` with `po("...", id = "xyz")` to change its ID on construction
+  - If you build large `Graph`s involving complicated optimizations, like too many `"learner_cv"`, then they may need a long time to train
+  - Use the `affect_columns` parameter if you want a `PipeOp` to only operate on part of the data. Use `po("select")` if you want to remove certain columns (possibly only along a single branch of multiple parallel branches). Both take `selector_XXX()` arguments, e.g. `selector_type("integer")`
+  - You may get the best performance if you actually inspect the features and see what kind of transformations work best for them.
+  - See what `PipeOp`s are available by inspecting `mlr_pipeops$keys()`, and get help about them using `?mlr_pipeops_XXX`.
