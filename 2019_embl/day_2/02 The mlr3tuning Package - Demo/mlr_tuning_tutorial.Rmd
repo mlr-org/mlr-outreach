@@ -189,6 +189,7 @@ instance_random = TuningInstance$new(
 ```
 ```{r}
 tuner_random$tune(instance_random)
+instance_random$result
 ```
 
 - We can get the "archive" in two ways: expand the `"tune_x"` parameters (the points we sampled on the search space, before transformation):
@@ -203,59 +204,23 @@ perfdata[, c("k", "distance", "kernel", "scale", "classif.ce")]
 ```
 
 Let's look at some plots of performance by parameter.
-- the following suggests that `scale` has a strong influence on performance.
+- The following suggests that `scale` has a strong influence on performance.
+
 ```{r}
 ggplot(perfdata, aes(x = k, y = classif.ce, color = scale)) +
   geom_point(size = 3) + geom_line()
 ```
-- The kernel seems to be less influential:
+
+- As for the kernel, there does not seem to be a strong influence:
+
 ```{r}
 ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel)) +
   geom_point(size = 3) + geom_line()
 ```
-- The influence of `distance` seems to be negligible
-```{r}
-ggplot(perfdata, aes(x = k, y = classif.ce, color = distance)) +
-  geom_point(size = 3)
-```
-
-It is always interesting to look at what could have been. The following dataset contains an optimization run result with 3600 evaluations--more than above by a factor of 100.
-```{r}
-perfdata = readRDS("randomsearch_3600.rds")
-```
-- The scale effect is just as visible.
-```{r}
-ggplot(perfdata, aes(x = k, y = classif.ce, color = scale)) +
-  geom_point(size = 2, alpha = 0.3)
-```
-- There seems to be a pattern by kernel as well...
-```{r}
-ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel)) +
-  geom_point(size = 2, alpha = 0.3)
-```
-- In fact, if we zoom in to `(5, 30)` x `(0.2, 0.3)` and do loess smoothing we see that different kernels have their optimum at different `k`.
-```{r, warning=FALSE}
-ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel,
-  group = interaction(kernel, scale))) +
-  geom_point(size = 2, alpha = 0.3) + geom_smooth() +
-  xlim(5, 30) + ylim(0.2, 0.3)
-```
-- What about the `distance` parameter? If we select all results with `k` between 10 and 20 and plot distance and kernel we see an approximate relationship
-```{r, warning=FALSE}
-ggplot(perfdata[k > 10 & k < 20 & scale == TRUE],
-  aes(x = distance, y = classif.ce, color = kernel)) +
-  geom_point(size = 2) + geom_smooth()
-```
-- Observations:
-  - The `scale` makes a lot of difference
-  - The `distance` seems to make the least difference
-  - Had we done grid search, we would have wasted a lot of evaluations on trying different `distance` values that usually give similar results. This is why random search works well.
-  - An even more intelligent approach would be to observe that `scale = FALSE` performs badly and not try out so many points with that one.
 
 
-# Tuning Results and Nested Resampling
-- Which method works better? If we choose our best model, how well will it perform in the wild?
-- Naive comparison:
+# Nested Resampling
+What performance do we expect from our tuned method? Naive evaluation:
 ```{r}
 instance_random$result$perf
 instance_grid$result$perf
@@ -263,60 +228,79 @@ instance_grid$result$perf
 
 - Problem: *overtuning*:
   - The more we search, the more our result is likely to just be "lucky" on your training data
+  - Imagine predicting random values and “tuning” the seed value. If we try enough seeds we may get good (tuning set) performance!
   - Different search spaces or search methods may introduce different amounts of randomness, so even the comparison is flawed!
 - Solution: Nested Resampling
 
-## Nested Resampling
 
-- Let's act like our tuning method is actually a `Learner`!
+The `mlr3tuning` package provides an `AutoTuner` that acts like our tuning method is actually a `Learner`!
+
 - `$train()` method:
-  - Tune hyperparameters on the training data
-  - Train a model with optimal hyperparameters on training data
-- `$predict()` method: use model trained on training data as model
+  - Tune hyperparameters on the training data, using a resampling strategy (below 5 fold CV).
+  - Train a model with optimal hyperparameters on whole training data.
+- `$predict()` method: use model trained on the whole training data as model.
 - This is just the workflow we use when tuning hyperparameters: Find the best parameters and use them for training.
-- The `AutoTuner` does exactly this.
+- The `AutoTuner` does exactly this. 
 
 ```{r}
 grid_auto = AutoTuner$new(
   learner = knn,
-  resampling = rsmp("cv", folds = 10),  # we can NOT use fixed resampling here
+  resampling = rsmp("cv", folds = 5), # we can NOT use fixed resampling here
   measures = msr("classif.ce"),
   tune_ps = searchspace,
   terminator = term("none"),
-  tuner = tnr("grid_search")
-)
-grid_auto$id = "gridsearch"
-
-random_auto = AutoTuner$new(
-  learner = knn,
-  resampling = rsmp("cv", folds = 10),
-  measures = msr("classif.ce"),
-  tune_ps = large_searchspace,
-  terminator = term("evals", n_evals = 36),
-  tuner = tnr("random_search")
-)
-random_auto$id = "randomsearch"
-```
-
-- Let's benchmark these
-- We can also compare this to the random forest, which often performs well without tuning
-```{r}
-design = data.table(
-  task = list(task),
-  learner = list(grid_auto, random_auto, lrn("classif.ranger")),
-  resampling = list(cv10_instance)
+  tuner = tnr("grid_search", resolution = 18)
 )
 ```
-- We are running 2 `AutoTuner`s **x** 10 outer resampling folds **x** 36 tuning steps **x** 10 inner resampling folds (plus 10 short folds of `ranger`). This may take a while, having many CPU cores helps.
+
+- The autotuner behaves just like a `Learner`. It can be used to combine the steps of hyperparameter tuning and model fitting, but is especially useful for resampling and fair comparison of performance through benchmarking.
 ```{r}
-bmr = benchmark(design)
+resample(task, grid_auto, cv10_instance)$aggregate()
 ```
 
-```{r}
-bmr$aggregate()
-```
+- Essentially this is the performance of a "knn with optimal hyperparameters found by grid search"
 
 # Appendix
+
+## Example: Tuning With Larger Budget
+
+It is always interesting to look at what could have been. The following dataset contains an optimization run result with 3600 evaluations--more than above by a factor of 100.
+```{r}
+perfdata = readRDS("randomsearch_3600.rds")
+```
+
+- The scale effect is just as visible.
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = scale)) +
+  geom_point(size = 2, alpha = 0.3)
+```
+
+- There seems to be a pattern by kernel as well...
+```{r}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel)) +
+  geom_point(size = 2, alpha = 0.3)
+```
+
+- In fact, if we zoom in to `(5, 30)` x `(0.2, 0.3)` and do loess smoothing we see that different kernels have their optimum at different `k`.
+```{r, warning=FALSE}
+ggplot(perfdata, aes(x = k, y = classif.ce, color = kernel,
+  group = interaction(kernel, scale))) +
+  geom_point(size = 2, alpha = 0.3) + geom_smooth() +
+  xlim(5, 30) + ylim(0.2, 0.3)
+```
+
+- What about the `distance` parameter? If we select all results with `k` between 10 and 20 and plot distance and kernel we see an approximate relationship
+```{r, warning=FALSE}
+ggplot(perfdata[k > 10 & k < 20 & scale == TRUE],
+  aes(x = distance, y = classif.ce, color = kernel)) +
+  geom_point(size = 2) + geom_smooth()
+```
+
+- Observations:
+  - The `scale` makes a lot of difference
+  - The `distance` seems to make the least difference
+  - Had we done grid search, we would have wasted a lot of evaluations on trying different `distance` values that usually give similar results. This is why random search works well.
+  - An even more intelligent approach would be to observe that `scale = FALSE` performs badly and not try out so many points with that one.
 
 ## Very quick `paradox` primer
 
