@@ -38,7 +38,8 @@ Link to this Page: **http://tiny.cc/mlr3_embl**
 
 ### Remote
 
-Easy: Run examples on RStudio Cloud. Everything is installed and was tested before, so it should work. You need to sign up for an account, then open the project: https://rstudio.cloud/project/673661
+Easy: Run examples on RStudio Cloud. Everything is installed and was tested before, so it should work. 
+You need to sign up for an account, then open the project: https://rstudio.cloud/spaces/5657/project/666317
 
 ### Alternatively: Local
 
