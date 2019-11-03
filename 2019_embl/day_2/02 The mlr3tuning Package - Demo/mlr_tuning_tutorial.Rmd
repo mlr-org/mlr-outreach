@@ -46,9 +46,9 @@ We use the same data as yesterday.
 credit = readRDS("credit.rds")
 task = TaskClassif$new("GermanCredit", credit, "class")
 ```
-Also, because tuning often takes a long time, we want to make more efficient use of our multicore CPUs.
+Also, because tuning often takes a long time, we want to make more efficient use of our multicore CPUs. Don't do this on rstudio cloud, however.
 ```{r, warning=FALSE}
-future::plan("multiprocess")
+# future::plan("multiprocess")
 ```
 
 ## Evaluation
@@ -76,7 +76,7 @@ library("paradox")
 ## Search Space and Problem Definition
 
 - First need to decide what `Learner` to optimize. We will use `"classif.kknn"`, the "kernelized" k-nearest neighbor classifier.
-  <!-- - (We could also try to optimize multiple `Learner`s simultaneously, i.e. choose the `Learner` to use automatically. We get to that in Day 3) -->
+  <!-- - (We could also try to optimize multiple `Learner`s simultaneously, i.e. choose the `Learner` to use automatically. Look into mlr3pipelines if you want to do that. -->
 - We will use `kknn` as a normal kNN without weighting first (i.e., use the `rectangular` kernel):
 ```{r}
 knn = lrn("classif.kknn", predict_type = "prob")
