@@ -28,7 +28,7 @@ Link to this Page: **http://tiny.cc/mlr3_embl**
 | Time | Topic                        |
 | :-   | :---------------             |
 | 09:30 - 11:00 | Lecture Session: Hyperparameter Tuning and nested Cross-Validation |
-| 11:00 - 12:30 | Lecture and Demo Session: Introduction to mlr3tuning|
+| 11:00 - 12:30 | Lecture and Demo Session: Introduction to mlr3tuning |
 | 12:30 - 13:30 | Lunch Break |
 | 13:30 - 15:00 | Lecture Session: Feature Engineering |
 | 15:00 - 16:30 | Lecture and Demo Session: Introduction to mlr3pipelines |
@@ -50,12 +50,12 @@ Load this page from the link above and copy-paste this in your R session:
 ```r
 # install from CRAN
 packages_cran = c("remotes", "data.table", "ggplot2", "skimr", "DataExplorer",
-  "rpart.plot", "precrec", "farff", "curl", "visNetwork",
+  "rpart.plot", "precrec", "farff", "curl", "visNetwork", "precrec",
   "glmnet", "kknn", "MASS", "ranger", "xgboost", "e1071",
   "future", "future.apply")
 
 # install things from GitHub that are not yet on CRAN
-packages_gith = c("mlr-org/mlr3tuning", "mlr-org/mlr3pipelines", "mlr-org/mlr3viz")
+packages_gith = "mlr-org/mlr3viz"
 
 to_install = setdiff(packages_cran, installed.packages()[,"Package"])
 if (length(to_install)) install.packages(to_install)
