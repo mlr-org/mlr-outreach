@@ -59,7 +59,8 @@ packages_gith = "mlr-org/mlr3viz"
 
 to_install = setdiff(packages_cran, installed.packages()[,"Package"])
 if (length(to_install)) install.packages(to_install)
-install.packages(c("mlr3", "mlr3misc", "paradox", "mlr3filters", "mlr3learners"))
+install.packages(c("mlr3", "mlr3misc", "paradox", "mlr3filters", "mlr3learners",
+  "mlr3pipelines", "mlr3tuning"))
 lapply(packages_gith, remotes::install_github)
 ```
 

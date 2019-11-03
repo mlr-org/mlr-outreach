@@ -404,7 +404,7 @@ summary {
 <p>Ensure all packages used in this tutorial are installed. This includes packages from the <code>mlr3</code> family, as well as other tools for data handling, cleaning and visualisation which we are going to use. <a href="#packages">Appendix for more info about packages</a></p>
 <pre class="r"><code># install from CRAN
 packages_cran = c(&quot;remotes&quot;, &quot;data.table&quot;, &quot;ggplot2&quot;, &quot;skimr&quot;, &quot;DataExplorer&quot;,
-  &quot;precrec&quot;, &quot;farff&quot;, &quot;curl&quot;, &quot;visNetwork&quot;, &quot;kknn&quot;, &quot;MASS&quot;, &quot;ranger&quot;, &quot;precrec&quot;,
+  &quot;precrec&quot;, &quot;farff&quot;, &quot;curl&quot;, &quot;visNetwork&quot;, &quot;kknn&quot;, &quot;MASS&quot;, &quot;ranger&quot;,
   &quot;xgboost&quot;, &quot;e1071&quot;, &quot;future&quot;, &quot;future.apply&quot;)
 
 # install things from GitHub that are not yet on CRAN
@@ -412,7 +412,8 @@ packages_gith = &quot;mlr-org/mlr3viz&quot;
 
 to_install = setdiff(packages_cran, installed.packages()[,&quot;Package&quot;])
 if (length(to_install)) install.packages(to_install)
-install.packages(c(&quot;mlr3&quot;, &quot;mlr3misc&quot;, &quot;paradox&quot;, &quot;mlr3filters&quot;, &quot;mlr3learners&quot;))
+install.packages(c(&quot;mlr3&quot;, &quot;mlr3misc&quot;, &quot;paradox&quot;, &quot;mlr3filters&quot;, &quot;mlr3learners&quot;,
+  &quot;mlr3pipelines&quot;, &quot;mlr3tuning&quot;))
 lapply(packages_gith, remotes::install_github)</code></pre>
 <p>Load the packages we are going to use:</p>
 <pre class="r"><code>library(&quot;data.table&quot;)
@@ -474,7 +475,7 @@ theme_set(theme_light())</code></pre>
 #&gt;  n obs: 1000 
 #&gt;  n variables: 21 
 #&gt; 
-#&gt; ── Variable type:factor ────────────────────────────────────────────────────────────────────────────────
+#&gt; ── Variable type:factor ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 #&gt;             variable missing complete    n n_unique                             top_counts ordered
 #&gt;      checking_status       0     1000 1000        4   no : 394, &lt;0: 274, 0&lt;=: 269, &gt;=2: 63   FALSE
 #&gt;                class       0     1000 1000        2              goo: 700, bad: 300, NA: 0   FALSE
@@ -491,7 +492,7 @@ theme_set(theme_light())</code></pre>
 #&gt;              purpose       0     1000 1000       10 rad: 280, new: 234, fur: 181, use: 103   FALSE
 #&gt;       savings_status       0     1000 1000        5  &lt;10: 603, no : 183, 100: 103, 500: 63   FALSE
 #&gt; 
-#&gt; ── Variable type:numeric ───────────────────────────────────────────────────────────────────────────────
+#&gt; ── Variable type:numeric ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 #&gt;                variable missing complete    n    mean      sd  p0    p25    p50     p75  p100
 #&gt;                     age       0     1000 1000   35.55   11.38  19   27     33     42       75
 #&gt;           credit_amount       0     1000 1000 3271.26 2822.74 250 1365.5 2319.5 3972.25 18424
