@@ -1,0 +1,65 @@
+---
+  title: "Introduction to mlr3"
+output:
+  html_document:
+  toc: TRUE
+---
+
+  ```{r, include = FALSE, warning = FALSE, message = FALSE}
+library(mlr3)
+train = readRDS("qsar_train.rds")
+test = readRDS("qsar_test.rds")
+```
+
+## Exercise 1
+
+Read the description of the data at https://archive.ics.uci.edu/ml/datasets/QSAR+biodegradation and get an overview of the data by looking at some simple univariate visualizations of the features at the webpage https://www.openml.org/d/1494 (open the link with chrome and click on *'show all 42 features'* in the features section).
+
+## Exercise 2
+The whole data consists of `r nrow(train) + nrow(test)` observations (molecules).
+We have split the data into training data `qsar_train.rds` and test data `qsar_test.rds`.
+For now, consider only the training data consisting of `r nrow(train)` molecules, each of it belonging either to the experimental class "not ready biodegradable" or to the class "ready biodegradable".
+The ultimate goal is to predict the `Class` column with values 1 (not ready biodegradable) and 2 (ready biodegradable) using information on molecular descriptors (i.e., our `r ncol(train)-1` features).
+
+a. Import the training data into R using the code below and create a classification task using `mlr3`:
+  ```{r, message=FALSE}
+# Import data
+# Create task
+```
+b. Define a random forest learner, which will be able to **predict the probability** of a molecule belonging one of the two classes. (Note: don't forget to use the `mlr3learners` package)
+```{r}
+# Define learner
+```
+c. Before we can assess the performance of the learner, we need to choose one or more performance measures we are interested in.
+    - First, look up the names (i.e., `Keys`) of all implemented performance measures:
+```{r}
+mlr_measures
+```
+      Try to find the "classification accuracy" and the "area under the roc curve" measure from this list by looking at the help page of the corresponding measure using `?mlr_measures_xxx` where `xxx` is the name of the measure.
+    - Now, define a list containing these two performance measures
+```{r}
+# Create list of measures
+```
+d. Use 10-fold cross-validation to estimate the performance of your random forest on the training data.
+```{r}
+# Define the resampling strategy and run the resampling
+```
+
+e. Sofar, we have only used the available training data to estimate the performace of a random forest. Now, do the following steps:
+    - Train the random forest on the whole training data.
+    - Import the test data and predict the probabilities of belonging to one of the two classes for the molecules in the test data.
+    - Measure the performance of the trained random forest on the test data using the "classification accuracy" and the "area under the roc curve".
+```{r}
+# 1. Train random forest on training data
+# 2. Import test data
+# 3. Predict probabilities for test data
+# 4. Measure performance on test data
+```
+
+## Exercise 3
+
+Compare 2 different learners using the `benchmark` function.
+
+```{r}
+# Benchmark two learners
+```
