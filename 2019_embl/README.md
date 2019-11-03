@@ -50,7 +50,7 @@ Load this page from the link above and copy-paste this in your R session:
 ```r
 # install from CRAN
 packages_cran = c("remotes", "data.table", "ggplot2", "skimr", "DataExplorer",
-  "rpart.plot", "precrec", "farff", "curl", "visNetwork", "precrec",
+  "rpart.plot", "farff", "curl", "visNetwork", "precrec",
   "glmnet", "kknn", "MASS", "ranger", "xgboost", "e1071",
   "future", "future.apply")
 
