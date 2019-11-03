@@ -383,7 +383,7 @@ summary {
 <ol style="list-style-type: lower-alpha">
 <li><p>Import the training data into R using the code below and create a classification task using <code>mlr3</code>:</p></li>
 <li><p>Define a random forest learner, which will be able to <strong>predict the probability</strong> of a molecule belonging one of the two classes. (Note: don’t forget to use the <code>mlr3learners</code> package)</p></li>
-<li><p>Before we can assess the performance of the learner, we need to choose one or more performance measures we are interested in.</p>
+<li>Before we can assess the performance of the learner, we need to choose one or more performance measures we are interested in.
 <ul>
 <li><p>First, look up the names (i.e., <code>Keys</code>) of all implemented performance measures:</p>
 <pre class="r"><code>mlr_measures
@@ -394,11 +394,11 @@ summary {
 #&gt;   classif.recall, classif.sensitivity, classif.specificity, classif.tn,
 #&gt;   classif.tnr, classif.tp, classif.tpr, debug, oob_error, regr.mae, regr.mse,
 #&gt;   regr.rmse, selected_features, time_both, time_predict, time_train</code></pre>
-<p>Try to find the “classification accuracy” and the “area under the roc curve” measure from this list by looking at the help page of the corresponding measure using <code>?mlr_measures_xxx</code> where <code>xxx</code> is the name of the measure.</p></li>
+Try to find the “classification accuracy” and the “area under the roc curve” measure from this list by looking at the help page of the corresponding measure using <code>?mlr_measures_xxx</code> where <code>xxx</code> is the name of the measure.</li>
 <li><p>Now, define a list containing these two performance measures</p></li>
 </ul></li>
 <li><p>Use 10-fold cross-validation to estimate the performance of your random forest on the training data.</p></li>
-<li><p>Sofar, we have only used the available training data to estimate the performace of a random forest. Now, do the following steps:</p>
+<li>Sofar, we have only used the available training data to estimate the performace of a random forest. Now, do the following steps:
 <ul>
 <li>Train the random forest on the whole training data.</li>
 <li>Import the test data and predict the probabilities of belonging to one of the two classes for the molecules in the test data.</li>

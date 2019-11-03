@@ -36,11 +36,11 @@ Ensure all packages used in this tutorial are installed. This includes packages 
 ```{r, message=FALSE, warning=FALSE, eval = FALSE}
 # install from CRAN
 packages_cran = c("remotes", "data.table", "ggplot2", "skimr", "DataExplorer",
-  "precrec", "farff", "curl", "visNetwork", "kknn", "MASS", "ranger", 
+  "precrec", "farff", "curl", "visNetwork", "kknn", "MASS", "ranger", "precrec",
   "xgboost", "e1071", "future", "future.apply")
 
 # install things from GitHub that are not yet on CRAN
-packages_gith = c("mlr-org/mlr3tuning", "mlr-org/mlr3pipelines", "mlr-org/mlr3viz")
+packages_gith = "mlr-org/mlr3viz"
 
 to_install = setdiff(packages_cran, installed.packages()[,"Package"])
 if (length(to_install)) install.packages(to_install)
@@ -302,8 +302,11 @@ bm_design = benchmark_grid(task = task, resamplings = rsmp("cv", folds = 10), le
 ```
 - Careful, large benchmarks may take a long time! This one should take less than a minute, however.
 - In General, we want use *parallelization* to speed things up on multicore machines.
+- This does **not work** on rstudio cloud, so only uncomment it locally!
 ```{r}
-future::plan("multiprocess")
+# future::plan("multiprocess")
+```
+```{r}
 bmr = benchmark(bm_design)
 ```
 - We can compare different measures. We compare misclassification rate and AUC.
