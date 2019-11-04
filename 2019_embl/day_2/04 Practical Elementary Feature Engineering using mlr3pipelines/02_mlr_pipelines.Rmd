@@ -23,7 +23,7 @@ In this case we will continue working with the **German Credit Dataset** again. 
 
 - preprocess the data as an integrated step of the model fitting process
 - tune the preprocessing parameters
-- use multiple `Learners` in as an *ensemble* model
+- use multiple `Learners` in an *ensemble* model
 
 # Prerequisites
 
@@ -39,11 +39,10 @@ library("mlr3tuning")
 We use the same data as before. but will restrict ourselves to the *numerical features*. To make things interesting, we introduce *missing values* in the dataset.
 
 ```{r, message=FALSE}
-# load the data set (id 31) from OpenML Library, clean it up and convert it
-# to a TaskClassif.
 credit_full = readRDS("credit.rds")
 credit = credit_full[, sapply(credit_full, is.numeric), with = FALSE]
 set.seed(20191101)
+# turn 10% of values into an NA
 credit = credit[, lapply(.SD, function(x)
   x[sample(c(TRUE, NA), length(x), replace = TRUE, prob = c(.9, .1))])]
 credit$class = credit_full$class
@@ -92,7 +91,18 @@ ranger$train(task)
 mlr_pipeops$keys("^impute")
 ```
 
+
 - We can impute numeric features by their median. If we had factorial features, we could also add an imputer for them, e.g. `po("imputenewlvl")`.
+- Let's use the `PipeOp` itself to create an imputed task. This shows us how the `PipeOp` works.
+```{r}
+imputer = po("imputemean")
+
+task_imputed = imputer$train(list(task))[[1]]
+
+task_imputed$head()  # no missing values
+```
+
+- If we used the imputed task for resampling, we would leak information from the test set into the trainingset. Therefore it is mandatory to attach the imputation operator to the `Learner` itself, creating a `GraphLearner`.
 ```{r}
 imp_ranger = GraphLearner$new(
   po("imputemean") %>>% ranger)
@@ -100,18 +110,24 @@ imp_ranger = GraphLearner$new(
 imp_ranger$train(task)  # runs without error: training succeeds
 ```
 
+- This can be used for resampling.
+```{r}
+rr = resample(task, imp_ranger, cv10_instance)
+rr$aggregate()
+```
+
 # Feature Filtering
 
 - Sometimes having less features is desirable (interpretability, cost of acquiring data)
 - Use *feature filter* to preferentially keep features with most information
-- (We use `po("imputemean")` because `filter$calculate` can not handle missing data!)
+- We use the imputed task here because `filter$calculate` can not handle missing data! When we use filtering in a pipeline, we will have to prefix the filter with `po("imputemean")`.
 ```{r}
 library("mlr3filters")
 mlr_filters
 filter = flt("importance", learner =
   lrn("classif.ranger", num.trees = 100, importance = "impurity"))
 
-filter$calculate(po("imputemean")$train(list(task))[[1]])$scores
+filter$calculate(task_imputed)$scores
 ```
 - What is the tradeoff between features and performance? Let's find out by tuning.
 - We incorporate our filtering in the pipeline using the `"filter"` `PipeOp`
