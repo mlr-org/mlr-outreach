@@ -120,35 +120,36 @@ rr$aggregate()
 
 - Sometimes having less features is desirable (interpretability, cost of acquiring data)
 - Use *feature filter* to preferentially keep features with most information
-- We use the imputed task here because `filter$calculate` can not handle missing data! When we use filtering in a pipeline, we will have to prefix the filter with `po("imputemean")`.
+- We use the `"anova"` filter
 ```{r}
 library("mlr3filters")
 mlr_filters
-filter = flt("importance", learner =
-  lrn("classif.ranger", num.trees = 100, importance = "impurity"))
+filter = flt("anova")
 
 filter$calculate(task_imputed)$scores
 ```
+
 - What is the tradeoff between features and performance? Let's find out by tuning.
 - We incorporate our filtering in the pipeline using the `"filter"` `PipeOp`
+- We remember that we also need to do imputation.
 ```{r}
 fpipe = po("imputemean") %>>% po("filter", filter, filter.nfeat = 3)
 
 fpipe$train(task)[[1]]$head()
 ```
 
-- To tune this, we need to change the `importance.filter.nfeat` parameter.
+- To tune this, we need to change the `anova.filter.nfeat` parameter.
 ```{r}
 library("paradox")
 searchspace = ParamSet$new(list(
-  ParamInt$new("importance.filter.nfeat", lower = 1, upper = length(task$feature_names))
+  ParamInt$new("anova.filter.nfeat", lower = 1, upper = length(task$feature_names))
 ))
 ```
 - Because this is only one parameter, we will use grid search. For higher dimensions, random search is more appropriate.
 ```{r}
 inst = TuningInstance$new(
   task, fpipe %>>% lrn("classif.ranger"), cv10_instance, msr("classif.ce"),
-  searchspace, term("none")
+  searchspace, term("none"), bm_args = list(store_models = TRUE)
 )
 tuner = tnr("grid_search")
 ```
@@ -161,7 +162,7 @@ tuner$tune(inst)
 - If we plot this, we see the possible tradeoffs between sparsity and predictive performance.
 ```{r}
 arx = inst$archive("params")
-ggplot(arx, aes(x = importance.filter.nfeat, y = classif.ce)) + geom_line()
+ggplot(arx, aes(x = anova.filter.nfeat, y = classif.ce)) + geom_line()
 ```
 
 # Stacking
@@ -188,7 +189,7 @@ rr = resample(task, stackgraph, cv10_instance, store_model = TRUE)
 rr$aggregate()
 ```
 
-- Each of the individual `Learner`s does not perform as well
+- Compare this to performance of individual `Learner`s. Note, however, that the difference is smaller than the variation in CV estimate.
 ```{r}
 bmr = benchmark(data.table(task = list(task),
   learner = list(GraphLearner$new(po("imputemean") %>>% lrn("classif.ranger")),
