@@ -5555,11 +5555,12 @@ summary {
 </table>
 <div id="intro" class="section level1">
 <h1>Intro</h1>
-<p>In this case we will continue working with the <strong>German Credit Dataset</strong> again. We already used different <code>Learner</code>s on it and tried to optimize their hyperparameters. Now we will</p>
+<p>In this tutorial we will continue working with the <strong>German Credit Dataset</strong>. We already used different <code>Learner</code>s on it and tried to optimize their hyperparameters. Now we will</p>
 <ul>
 <li>preprocess the data as an integrated step of the model fitting process</li>
 <li>tune the preprocessing parameters</li>
 <li>use multiple <code>Learners</code> in an <em>ensemble</em> model</li>
+<li>see some techniques that make <code>Learner</code>s able to tackle challenging datasets that they could not handle otherwise.</li>
 </ul>
 </div>
 <div id="prerequisites" class="section level1">
@@ -5593,7 +5594,7 @@ task$head()
 </ul>
 <pre class="r"><code>set.seed(20191101)
 cv10_instance = rsmp(&quot;cv&quot;)$instantiate(task)</code></pre>
-<p>Uncomment the following line if you are running this locally.</p>
+<p>Uncomment the following line if you are running this locally (i.e. not on RStudio Cloud).</p>
 <pre class="r"><code># future::plan(&quot;multiprocess&quot;)</code></pre>
 </div>
 <div id="intro-1" class="section level1">
@@ -5629,7 +5630,7 @@ ranger$train(task)
 <pre class="r"><code>mlr_pipeops$keys(&quot;^impute&quot;)
 #&gt; [1] &quot;imputehist&quot;   &quot;imputemean&quot;   &quot;imputemedian&quot; &quot;imputenewlvl&quot; &quot;imputesample&quot;</code></pre>
 <ul>
-<li>We can impute numeric features by their median. If we had factorial features, we could also add an imputer for them, e.g. <code>po(&quot;imputenewlvl&quot;)</code>.</li>
+<li>We choose to impute numeric features by their median. If we had factorial features, we could also add an imputer for them, e.g. <code>po(&quot;imputenewlvl&quot;)</code>.</li>
 <li>Let’s use the <code>PipeOp</code> itself to create an imputed task. This shows us how the <code>PipeOp</code> works.</li>
 </ul>
 <pre class="r"><code>imputer = po(&quot;imputemean&quot;)
@@ -5645,10 +5646,33 @@ task_imputed$head()  # no missing values
 #&gt; 5:   bad  53      4870.000       24                2                      3              2        4.000000
 #&gt; 6:  good  35      3285.826       36                1                      2              2        4.000000</code></pre>
 <ul>
-<li>If we used the imputed task for resampling, we would leak information from the test set into the trainingset. Therefore it is mandatory to attach the imputation operator to the <code>Learner</code> itself, creating a <code>GraphLearner</code>.</li>
+<li>The <code>$state$model</code> slot contains the medians of all columns. The <code>PipeOp</code> needs to remember these to impute missing values in new data during the <code>$predict()</code> phase.</li>
 </ul>
-<pre class="r"><code>imp_ranger = GraphLearner$new(
-  po(&quot;imputemean&quot;) %&gt;&gt;% ranger)
+<pre class="r"><code>imputer$state$model
+#&gt; $age
+#&gt; [1] 35.54994
+#&gt; 
+#&gt; $credit_amount
+#&gt; [1] 3285.826
+#&gt; 
+#&gt; $duration
+#&gt; [1] 20.86712
+#&gt; 
+#&gt; $existing_credits
+#&gt; [1] 1.40708
+#&gt; 
+#&gt; $installment_commitment
+#&gt; [1] 2.956757
+#&gt; 
+#&gt; $num_dependents
+#&gt; [1] 1.163934
+#&gt; 
+#&gt; $residence_since
+#&gt; [1] 2.846154</code></pre>
+<ul>
+<li>If we used the imputed task for resampling, we would leak information from the test set into the training set. Therefore it is mandatory to attach the imputation operator to the <code>Learner</code> itself, creating a <code>GraphLearner</code>.</li>
+</ul>
+<pre class="r"><code>imp_ranger = GraphLearner$new(po(&quot;imputemean&quot;) %&gt;&gt;% ranger)
 
 imp_ranger$train(task)  # runs without error: training succeeds</code></pre>
 <ul>
@@ -5662,16 +5686,18 @@ rr$aggregate()
 <div id="feature-filtering" class="section level1">
 <h1>Feature Filtering</h1>
 <ul>
-<li>Sometimes having less features is desirable (interpretability, cost of acquiring data)</li>
+<li>Sometimes having fewer features is desirable (interpretability, cost of acquiring data, possibly even better performance)</li>
 <li>Use <em>feature filter</em> to preferentially keep features with most information</li>
-<li>We use the <code>&quot;anova&quot;</code> filter</li>
 </ul>
 <pre class="r"><code>library(&quot;mlr3filters&quot;)
 mlr_filters
 #&gt; &lt;DictionaryFilter&gt; with 16 stored values
 #&gt; Keys: anova, auc, carscore, cmim, correlation, disr, importance, information_gain, jmi, jmim,
-#&gt;   kruskal_test, mim, mrmr, njmim, performance, variance
-filter = flt(&quot;anova&quot;)
+#&gt;   kruskal_test, mim, mrmr, njmim, performance, variance</code></pre>
+<ul>
+<li>We use the <code>&quot;anova&quot;</code> filter. It uses an F-test for values in different target classes (equivalent to a t-test in the binary classification case).</li>
+</ul>
+<pre class="r"><code>filter = flt(&quot;anova&quot;)
 
 filter$calculate(task_imputed)$scores
 #&gt;               duration          credit_amount                    age installment_commitment 
@@ -5694,7 +5720,7 @@ fpipe$train(task)[[1]]$head()
 #&gt; 5:   bad  53      4870.000       24
 #&gt; 6:  good  35      3285.826       36</code></pre>
 <ul>
-<li>To tune this, we need to change the <code>anova.filter.nfeat</code> parameter.</li>
+<li>We are going to tune over the <code>anova.filter.nfeat</code> parameter; it regulates how many features are kept by the filter.</li>
 </ul>
 <pre class="r"><code>library(&quot;paradox&quot;)
 searchspace = ParamSet$new(list(
@@ -5705,15 +5731,15 @@ searchspace = ParamSet$new(list(
 </ul>
 <pre class="r"><code>inst = TuningInstance$new(
   task, fpipe %&gt;&gt;% lrn(&quot;classif.ranger&quot;), cv10_instance, msr(&quot;classif.ce&quot;),
-  searchspace, term(&quot;none&quot;), bm_args = list(store_models = TRUE)
+  searchspace, term(&quot;none&quot;)
 )
 tuner = tnr(&quot;grid_search&quot;)</code></pre>
 <ul>
-<li>This may take a while…</li>
+<li>Tuning may take a while…</li>
 </ul>
 <pre class="r"><code>tuner$tune(inst)</code></pre>
 <ul>
-<li>If we plot this, we see the possible tradeoffs between sparsity and predictive performance.</li>
+<li>If we plot the performance over the number of features, we see the possible tradeoffs between sparsity and predictive performance.</li>
 </ul>
 <pre class="r"><code>arx = inst$archive(&quot;params&quot;)
 ggplot(arx, aes(x = anova.filter.nfeat, y = classif.ce)) + geom_line()</code></pre>
@@ -5758,7 +5784,7 @@ bmr$aggregate()[, c(&quot;learner_id&quot;, &quot;classif.ce&quot;)]
 #&gt; 2:    imputemean.classif.kknn      0.352
 #&gt; 3: imputemean.classif.log_reg      0.299</code></pre>
 <ul>
-<li>If we train the stacked <code>Learner</code> and look into the model we can see how “important” each of the stacked models is</li>
+<li>If we train the stacked <code>Learner</code> and look into the model, we can see how “important” each of the stacked models is</li>
 </ul>
 <pre class="r"><code>stackgraph$train(task)
 #&gt; $classif.log_reg.output
@@ -5832,7 +5858,7 @@ task$head()
 #&gt; 5:               4             &lt;100
 #&gt; 6:               4 no known savings</code></pre>
 <ul>
-<li>When training with a small datasset or datasets with many factor levels it is possible that not all possible factor levels are visible to the <code>Learner</code></li>
+<li>When training with a small datasset, or datasets with many factor levels, it is possible that not all possible factor levels are visible to the <code>Learner</code> during training. Prediction then fails because the <code>Learner</code> does not know how to handle unseen factor levels.</li>
 </ul>
 <pre class="r"><code>logreg = lrn(&quot;classif.log_reg&quot;)
 logreg$train(task$clone()$filter(1:30))
@@ -5851,7 +5877,7 @@ logreg$train(task$clone()$filter(1:2))
 #&gt; Error in `contrasts&lt;-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]): contrasts can be applied only to factors with 2 or more levels</code></pre>
 <ul>
 <li>This can be fixed using <code>&quot;removeconstants&quot;</code></li>
-<li>We get the following imputation + robustification pipeline:</li>
+<li>We get the following robustification pipeline:</li>
 </ul>
 <pre class="r"><code>robustify = po(&quot;fixfactors&quot;) %&gt;&gt;%
   po(&quot;removeconstants&quot;) %&gt;&gt;%

@@ -19,11 +19,12 @@ lgr::get_logger("mlr3")$set_threshold("warn")
 ```
 # Intro
 
-In this case we will continue working with the **German Credit Dataset** again. We already used different `Learner`s on it and tried to optimize their hyperparameters. Now we will
+In this tutorial we will continue working with the **German Credit Dataset**. We already used different `Learner`s on it and tried to optimize their hyperparameters. Now we will
 
 - preprocess the data as an integrated step of the model fitting process
 - tune the preprocessing parameters
 - use multiple `Learners` in an *ensemble* model
+- see some techniques that make `Learner`s able to tackle challenging datasets that they could not handle otherwise.
 
 # Prerequisites
 
@@ -57,7 +58,7 @@ set.seed(20191101)
 cv10_instance = rsmp("cv")$instantiate(task)
 ```
 
-Uncomment the following line if you are running this locally.
+Uncomment the following line if you are running this locally (i.e. not on RStudio Cloud).
 ```{r, warning=FALSE}
 # future::plan("multiprocess")
 ```
@@ -92,7 +93,7 @@ mlr_pipeops$keys("^impute")
 ```
 
 
-- We can impute numeric features by their median. If we had factorial features, we could also add an imputer for them, e.g. `po("imputenewlvl")`.
+- We choose to impute numeric features by their median. If we had factorial features, we could also add an imputer for them, e.g. `po("imputenewlvl")`.
 - Let's use the `PipeOp` itself to create an imputed task. This shows us how the `PipeOp` works.
 ```{r}
 imputer = po("imputemean")
@@ -102,10 +103,14 @@ task_imputed = imputer$train(list(task))[[1]]
 task_imputed$head()  # no missing values
 ```
 
-- If we used the imputed task for resampling, we would leak information from the test set into the trainingset. Therefore it is mandatory to attach the imputation operator to the `Learner` itself, creating a `GraphLearner`.
+- The `$state$model` slot contains the medians of all columns. The `PipeOp` needs to remember these to impute missing values in new data during the `$predict()` phase.
 ```{r}
-imp_ranger = GraphLearner$new(
-  po("imputemean") %>>% ranger)
+imputer$state$model
+```
+
+- If we used the imputed task for resampling, we would leak information from the test set into the training set. Therefore it is mandatory to attach the imputation operator to the `Learner` itself, creating a `GraphLearner`.
+```{r}
+imp_ranger = GraphLearner$new(po("imputemean") %>>% ranger)
 
 imp_ranger$train(task)  # runs without error: training succeeds
 ```
@@ -118,12 +123,15 @@ rr$aggregate()
 
 # Feature Filtering
 
-- Sometimes having less features is desirable (interpretability, cost of acquiring data)
+- Sometimes having fewer features is desirable (interpretability, cost of acquiring data, possibly even better performance)
 - Use *feature filter* to preferentially keep features with most information
-- We use the `"anova"` filter
 ```{r}
 library("mlr3filters")
 mlr_filters
+```
+
+- We use the `"anova"` filter. It uses an F-test for values in different target classes (equivalent to a t-test in the binary classification case).
+```{r}
 filter = flt("anova")
 
 filter$calculate(task_imputed)$scores
@@ -138,7 +146,7 @@ fpipe = po("imputemean") %>>% po("filter", filter, filter.nfeat = 3)
 fpipe$train(task)[[1]]$head()
 ```
 
-- To tune this, we need to change the `anova.filter.nfeat` parameter.
+- We are going to tune over the `anova.filter.nfeat` parameter; it regulates how many features are kept by the filter.
 ```{r}
 library("paradox")
 searchspace = ParamSet$new(list(
@@ -149,17 +157,17 @@ searchspace = ParamSet$new(list(
 ```{r}
 inst = TuningInstance$new(
   task, fpipe %>>% lrn("classif.ranger"), cv10_instance, msr("classif.ce"),
-  searchspace, term("none"), bm_args = list(store_models = TRUE)
+  searchspace, term("none")
 )
 tuner = tnr("grid_search")
 ```
 
-- This may take a while...
+- Tuning may take a while...
 ```{r, warning = FALSE}
 tuner$tune(inst)
 ```
 
-- If we plot this, we see the possible tradeoffs between sparsity and predictive performance.
+- If we plot the performance over the number of features, we see the possible tradeoffs between sparsity and predictive performance.
 ```{r}
 arx = inst$archive("params")
 ggplot(arx, aes(x = anova.filter.nfeat, y = classif.ce)) + geom_line()
@@ -199,7 +207,7 @@ bmr = benchmark(data.table(task = list(task),
 bmr$aggregate()[, c("learner_id", "classif.ce")]
 ```
 
-- If we train the stacked `Learner` and look into the model we can see how "important" each of the stacked models is
+- If we train the stacked `Learner` and look into the model, we can see how "important" each of the stacked models is
 ```{r}
 stackgraph$train(task)
 
@@ -218,7 +226,7 @@ task = TaskClassif$new("GermanCredit", credit, "class")
 task$head()
 ```
 
-- When training with a small datasset or datasets with many factor levels it is possible that not all possible factor levels are visible to the `Learner`
+- When training with a small datasset, or datasets with many factor levels, it is possible that not all possible factor levels are visible to the `Learner` during training. Prediction then fails because the `Learner` does not know how to handle unseen factor levels.
 ```{r, error = TRUE}
 logreg = lrn("classif.log_reg")
 logreg$train(task$clone()$filter(1:30))
@@ -235,7 +243,7 @@ logreg$train(task$clone()$filter(1:2))
 ```
 
 - This can be fixed using `"removeconstants"`
-- We get the following imputation + robustification pipeline:
+- We get the following robustification pipeline:
 ```{r}
 robustify = po("fixfactors") %>>%
   po("removeconstants") %>>%
