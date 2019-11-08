@@ -1,0 +1,24 @@
+\documentclass[11pt,compress]{beamer}
+% deactivate beamer navigation
+\setbeamertemplate{navigation symbols}{}
+\useoutertheme{shadow}
+%\setbeamertemplate{headline}{}
+\usepackage{forloop}
+\usepackage{pdfpages}
+\includepdfset{nup=1, clip, trim=0mm 0mm 0mm 0mm, offset=0 0, landscape=false, pagecommand={\thispagestyle{plain}}} % trim=0mm 6mm 0mm 0mm, offset=0 15,
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{papersize={180mm, 135mm}, top=-1.5mm} % 210mm, 297mm
+%\pagecolor[HTML]{FAFAFA}
+% \geometry{includehead,includefoot,
+% left=1.5in,right=1.0in,
+% top=0.6in,bottom=0.8in,
+% headheight=20pt,headsep=0.25in,
+% footskip=0.3in}
+\begin{document}
+{
+\setbeamercolor{background canvas}{bg=}
+	\includepdf[pages={1-29}]{01_slides-regularization}
+	\includepdf[pages={1-5, 7-8, 10-11, 15-49}]{02_slides-boosting-basic}
+}
+\end{document}

@@ -1,0 +1,29 @@
+\documentclass[11pt,compress]{beamer}
+% deactivate beamer navigation
+\setbeamertemplate{navigation symbols}{}
+\useoutertheme{shadow}
+%\setbeamertemplate{headline}{}
+\usepackage{forloop}
+\usepackage{pdfpages}
+\includepdfset{nup=1, clip, trim=0mm 0mm 0mm 0mm, offset=0 0, landscape=false, pagecommand={\thispagestyle{plain}}} % trim=0mm 6mm 0mm 0mm, offset=0 15,
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{papersize={180mm, 135mm}, top=-1.5mm} % 210mm, 297mm
+%\pagecolor[HTML]{FAFAFA}
+% \geometry{includehead,includefoot,
+% left=1.5in,right=1.0in,
+% top=0.6in,bottom=0.8in,
+% headheight=20pt,headsep=0.25in,
+% footskip=0.3in}
+\begin{document}
+{
+\setbeamercolor{background canvas}{bg=}
+	\includepdf[pages={1-last}]{01_slides-intro-performance.pdf}
+	\includepdf[pages={1-3, 6-9, 11}]{02_slides-measures.pdf}
+	\includepdf[pages={1-4, 7-11, 14-last}]{03_slides-train-test.pdf}
+	\includepdf[pages={1-last}]{04_slides-overfitting.pdf}
+	\includepdf[pages={1-8, 12-last}]{05_slides-resampling.pdf}
+	\includepdf[pages={1-2, 5-9}]{06_slides-roc-1.pdf}
+	\includepdf[pages={1-4,6-last}]{07_slides-roc-2.pdf}
+}
+\end{document}
