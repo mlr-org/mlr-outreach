@@ -1,0 +1,125 @@
+---
+title: "Introduction to mlr3"
+output:
+  html_document:
+    toc: TRUE
+---
+
+```{r, include = FALSE, warning = FALSE, message = FALSE}
+# Just some preparation
+knitr::opts_chunk$set(
+  cache = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+if (require("data.table")) data.table::setDTthreads(1)
+options(width = 90)
+set.seed(8008135)
+lgr::get_logger("mlr3")$set_threshold("warn")
+
+# Create the train and test data
+# task = OpenML::getOMLTask(75232)
+# task2 = OpenML::convertOMLTaskToMlr(task)
+# train_set = task2$mlr.rin$train.inds[[1]]
+# test_set = task2$mlr.rin$test.inds[[1]]
+# d = mlr::getTaskData(task2$mlr.task)
+# d$Class = factor(d$Class, levels = c("2","1"))
+# train = d[train_set, ]
+# test = d[test_set, ]
+# saveRDS(train, "qsar_train.rds")
+# saveRDS(test, "qsar_test.rds")
+
+train = readRDS("qsar_train.rds")
+test = readRDS("qsar_test.rds")
+solution = F
+set.seed(1)
+library(mlr3)
+```
+
+## Exercise 1
+
+Read the description of the data at https://archive.ics.uci.edu/ml/datasets/QSAR+biodegradation and get an overview of the data by looking at some simple univariate visualizations of the features at the webpage https://www.openml.org/d/1494 (open the link with chrome and click on *'show all 42 features'* in the features section).
+
+## Exercise 2
+The whole data consists of `r nrow(train) + nrow(test)` observations (molecules). 
+We have split the data into training data `qsar_train.rds` and test data `qsar_test.rds`.
+For now, consider only the training data consisting of `r nrow(train)` molecules, each of it belonging either to the experimental class "not ready biodegradable" or to the class "ready biodegradable".
+The ultimate goal is to predict the `Class` column with values 1 (not ready biodegradable) and 2 (ready biodegradable) using information on molecular descriptors (i.e., our `r ncol(train)-1` features).
+
+a. Import the training data into R using the code below and create a classification task using `mlr3`:
+```{r, eval = solution, echo = solution, message=FALSE}
+# Importing the train data
+train = readRDS("qsar_train.rds")
+```
+```{r, eval = solution, echo = solution}
+library(mlr3)
+task = TaskClassif$new("qsar", train, "Class")
+```
+b. Define a random forest learner, which will be able to **predict the probability** of a molecule belonging one of the two classes. (Note: don't forget to use the `mlr3learners` package)
+```{r, eval = solution, echo = solution}
+# if you don't load mlr3learners, you won't find a random forest
+mlr_learners
+
+# after loading mlr3learners, the available list of learners is extended
+library(mlr3learners)
+mlr_learners
+
+# now, we can construct the random forest learner
+learner_rf = lrn("classif.ranger", predict_type = "prob")
+```
+c. Before we can assess the performance of the learner, we need to choose one or more performance measures we are interested in.
+    - First, look up the names (i.e., `Keys`) of all implemented performance measures:
+      ```{r}
+mlr_measures
+```
+      Try to find the "classification accuracy" and the "area under the roc curve" measure from this list by looking at the help page of the corresponding measure using `?mlr_measures_xxx` where `xxx` is the name of the measure.
+    - Now, define a list containing these two performance measures
+      ```{r, eval = solution, echo = solution}
+msr_list = list(msr("classif.auc"), msr("classif.acc"))
+```
+d. Use 10-fold cross-validation to estimate the performance of your random forest on the training data.
+```{r, eval = solution, echo = solution}
+# define the resampling strategy
+resampling = rsmp("cv", folds = 10)
+# run the resampling
+res_sub = resample(task, learner_rf, resampling)
+# calculate the performance of the two measures from the previous exercise
+res_sub$aggregate(msr_list)
+```
+
+e. Sofar, we have only used the available training data to estimate the performace of a random forest. Now, do the following steps:
+    - Train the random forest on the whole training data.
+    - Import the test data and predict the probabilities of belonging to one of the two classes for the molecules in the test data.
+    - Measure the performance of the trained random forest on the test data using the "classification accuracy" and the "area under the roc curve".
+```{r, eval = solution, echo = solution}
+# currently we havn't trained a model
+learner_rf$model
+
+# we use the training data (included in task) to train a model
+learner_rf$train(task)
+learner_rf$model
+
+# Import the test data
+test = readRDS("qsar_test.rds")
+# we make predictions for the test data
+preds = learner_rf$predict_newdata(test)
+preds
+
+# measure the performance on the test data
+preds$score(msr_list)
+```
+
+## Exercise 3
+
+Compare 2 different learners using the `benchmark` function.
+
+```{r, eval = solution, message=FALSE, warning=FALSE, echo = solution}
+lrn_list = list(
+  lrn("classif.log_reg", predict_type = "prob"),
+  lrn("classif.ranger", predict_type = "prob")
+)
+
+bm_design = benchmark_grid(task = task, resamplings = resampling, learners = lrn_list)
+bmr = benchmark(bm_design)
+bmr$aggregate(msr_list)
+```
