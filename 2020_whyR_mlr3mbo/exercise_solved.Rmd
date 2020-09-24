@@ -1,0 +1,307 @@
+---
+title: 'Exercises: Hyperparametertuning with mlr3mbo'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Formulating the Objective
+
+Write a function that calculates the accuracy for a given hyperparameter setting.
+
+- Define the resampling strategy. e.g. 10-fold CV.
+- Define the *accuracy* measure.
+- Calculate the average error by evaluating `resample()`.
+- Return the averaged accuracy by calling `$aggregate()` on the `ResampleResult`.
+
+```{r}
+library(mlr3)
+library(mlr3learners)
+library(mlr3misc)
+library(data.table)
+set.seed(3)
+
+task = tsk("pima")
+learner = lrn("classif.rpart")
+
+tune_fun = function(xs) {
+  this_learner = learner$clone(deep = TRUE)
+  this_learner$param_set$values = insert_named(learner$param_set$values, xs)
+  resampling = rsmp("cv") #!
+  measure = msr("classif.acc") #!
+  res = resample(task, this_learner, resampling) #!
+  res = res$aggregate(measures = measure) #!
+  return(list(y=res))
+}
+```
+
+If you defined the function correctly this should work.
+```{r}
+tune_fun(list(cp = 0.02, minsplit = 3))
+```
+
+Define the search space for this problem.
+
+- `cp` as a real-valued parameter from 0.001 to 0.1
+- `minsplit` as an integer parameter from 1 to 10
+
+```{r}
+library(paradox)
+search_space = ParamSet$new(list(
+  ParamDbl$new("cp", lower = 0.001, upper = 0.1), #!
+  ParamInt$new("minsplit", lower = 1, upper = 10) #!
+))
+
+```
+
+## Create a bbotk Objective
+
+For optimization with `mlr3mbo` we need to wrap the function inside an `Objective` object.
+
+- Create a codomain `ParamSet` object that contains one real-valued parameter `y` with the tag `maximize`
+- Use `ObjectiveRFun$new()` to create a new `Objective` object.
+
+```{r}
+library(bbotk)
+codomain = ParamSet$new(list(ParamDbl$new("y", tags = "maximize"))) #!
+tune_obj = ObjectiveRFun$new(fun = tune_fun, domain = search_space, codomain = codomain) #!(
+
+tune_obj$eval(list(cp = 0.02, minsplit = 3))
+```
+
+- Create a `data.table` with different values for `cp` and `minsplit` and evaluate it using `tune_obj$eval_dt()`.
+```{r}
+grid = expand.grid(cp = c(0.02, 0.05, 0.09), minsplit = c(1,5,7)) #!=
+tune_obj$eval_dt(grid)
+```
+
+## Using the bbotk Instance and Archive
+
+How much budget do we allow for the optimization?
+
+- Create a `Terminator` object with `n_evals = 10`.
+
+```{r}
+term = trm("evals", n_evals = 10) #!=
+```
+
+- Create a new `OptimInstanceSingleCrit` that contains `tune_obj` as objective and the terminator form above.
+- Evaluate the grid on the instance by calling the `$eval_batch` method from the instance object.
+
+```{r}
+inst = OptimInstanceSingleCrit$new(objective = tune_obj, terminator = term)
+inst$eval_batch(as.data.table(grid)) #!
+```
+
+```{r}
+inst$is_terminated
+inst$archive$best()
+inst$archive$n_evals # we have one more evaluation to go.
+archdata = inst$archive$data()
+library(ggplot2)
+ggplot(archdata, aes(x=cp, y=minsplit, size=y, color=y)) + geom_point()
+```
+
+- Based on the plot, try to make a good proposal what would be a good hyperparameter setting.
+- Evaluate your guess using the `$eval_batch` method from the instance object.
+- Could you beat the best configuration?
+
+```{r}
+inst$eval_batch(data.table(minsplit = 4, cp = 0.01)) #!(
+max(inst$archive$data()$y[1:9]) < inst$archive$data()$y[10]
+```
+
+You probably noticed that the instance prevents evaluations above the budget.
+```{r,error=TRUE}
+inst$eval_batch(data.table(minsplit = 7, cp = 0.01)) #terminated error is expected!
+```
+
+# mlr3mbo
+
+## Components
+
+For MBO we need to define the *Surrogate*, the *Acquistion Function* and an *Optimizer* for the Acquistion Function.
+
+- Choose a regression learner for the surrogate model, e.g. `regr.km`.
+- Set the iteration number of the `acq_optimizer` to 1100.
+
+```{r}
+library(mlr3mbo)
+surrogate = SurrogateSingleCritLearner$new(learner = lrn("regr.km", nugget.estim = TRUE, covtype = "matern3_2")) #!lrn(
+surrogate$model$encapsulate = c(train = "callr", predict = "none") # prevents output from regr.km learner
+acq_function = AcqFunctionCB$new(surrogate)
+acq_optimizer = AcqOptimizerRandomSearch$new()
+acq_optimizer$param_set$values$iters = 1100 #!$iters
+```
+
+## Preparing the loop
+
+MBO can only start with some points that are already evaluated.
+
+- Populate the instance with 10 random points by calling `$eval_batch()`
+
+```{r}
+instance = OptimInstanceSingleCrit$new(
+  objective = tune_obj, 
+  terminator = trm("evals", n_evals = 15)
+)
+design = generate_design_lhs(search_space, 10)$data
+instance$eval_batch(design) #!
+```
+
+The following code generates one proposal and evaluates it on the objective.
+
+```{r}
+# only needs to be run once at the beginning
+archive = instance$archive # reference
+acq_function$setup(archive) # 
+
+# the steps we need to repeat
+xydt = archive$data()
+surrogate$update(xydt = xydt[, c(archive$cols_x, archive$cols_y), with = FALSE], y_cols = archive$cols_y) #update surrogate model with new data
+acq_function$update(archive) 
+xdt = acq_optimizer$optimize(acq_function)
+instance$eval_batch(xdt)
+```
+
+- Transform the code from above into a loop that proposes points, evaluates them on the objective and updates the surrogate.
+
+```{r}
+repeat {
+  xydt = archive$data()
+  surrogate$update(xydt = xydt[, c(archive$cols_x, archive$cols_y), with = FALSE], y_cols = archive$cols_y) #update surrogate model with new data
+  acq_function$update(archive) 
+  xdt = acq_optimizer$optimize(acq_function)
+  instance$eval_batch(xdt)
+  if (instance$is_terminated || instance$terminator$is_terminated(archive)) break
+}
+```
+
+We can visualize the *acquistion function*.
+
+```{r}
+# first we update it with the latest evaluation
+xydt = archive$data()
+surrogate$update(xydt = xydt[, c(archive$cols_x, archive$cols_y), with = FALSE], y_cols = archive$cols_y) #update surrogate model with new data
+acq_function$update(archive) 
+xdt = acq_optimizer$optimize(acq_function)
+  
+fine_grid = generate_design_grid(search_space, resolution = 100)$data
+res = acq_function$eval_dt(fine_grid)
+fine_grid = cbind(fine_grid, res)
+g = ggplot(fine_grid, aes(x=cp, y=minsplit)) + geom_raster(aes(fill=acq_cb))
+g = g + geom_point(data = instance$archive$data())
+g = g + geom_point(data = acq_optimizer$optimize(acq_function), col = "red")
+g
+```
+
+We can also visualize the *Surrogate*.
+
+```{r}
+search_space_dbl = ParamSet$new(list(
+  ParamDbl$new("cp", lower = 0.001, upper = 0.1), #!
+  ParamDbl$new("minsplit", lower = 1, upper = 10) #!
+))
+fine_grid = generate_design_grid(search_space_dbl, resolution = 100)$data
+res = surrogate$predict(xdt = fine_grid)
+fine_grid = cbind(fine_grid, res)
+g = ggplot(fine_grid, aes(x=cp, y=minsplit)) + geom_raster(aes(fill=mean))
+g = g + geom_point(data = instance$archive$data())
+g
+```
+
+# mlr3mbo multiple proposals
+
+First, we create a new `OptimInstanceSingleCrit` and all MBO components that we need.
+Exactly as before, nothing has to be modified here.
+```{r}
+# tuning instance
+tune_fun = function(xs, task = tsk("pima"), learner = lrn("classif.rpart")) {
+  this_learner = learner$clone(deep = TRUE)
+  this_learner$param_set$values = insert_named(learner$param_set$values, xs)
+  res = resample(task, this_learner, rsmp("cv"))
+  res = res$aggregate(msr("classif.acc"))
+  return(list(y=res))
+}
+
+search_space = ParamSet$new(list(
+  ParamDbl$new("cp", lower = 0.001, upper = 0.1),
+  ParamInt$new("minsplit", lower = 1, upper = 10)
+))
+
+codomain = ParamSet$new(list(ParamDbl$new("y", tags = "maximize")))
+tune_obj = ObjectiveRFun$new(fun = tune_fun, domain = search_space, codomain = codomain)
+
+instance = OptimInstanceSingleCrit$new(
+  objective = tune_obj, 
+  terminator = trm("evals", n_evals = 20)
+)
+design = generate_design_lhs(search_space, 10)$data
+instance$eval_batch(design)
+
+# mbo components
+surrogate = SurrogateSingleCritLearner$new(learner = lrn("regr.km", nugget.estim = TRUE, covtype = "matern3_2"))
+acq_function = AcqFunctionCB$new(surrogate)
+acq_optimizer = AcqOptimizerRandomSearch$new()
+```
+
+Here we have the code that executes the MBO Loop.
+
+Within the loop
+
+- set the `lambda` value of the `cb` `acq_function` to 1
+- optimize the `acq_function` and store the proposal
+- set the `lambda` value of the `cb` `acq_function` to 10
+- optimize the `acq_function` again and store the proposal
+- `rbind` both proposals and evaluate them on the instance
+
+```{r}
+# only needs to be run once at the beginning
+archive = instance$archive # reference
+acq_function$setup(archive)
+
+repeat {
+  xydt = archive$data()
+  surrogate$update(xydt = xydt[, c(archive$cols_x, archive$cols_y), with = FALSE], y_cols = archive$cols_y) #update surrogate model with new data
+  acq_function$update(archive) 
+  acq_function$param_set$values$lambda = 1L #!
+  xdt_1 = acq_optimizer$optimize(acq_function) #!
+  acq_function$param_set$values$lambda = 10L #!
+  xdt_10 = acq_optimizer$optimize(acq_function) #!
+  xdt = rbind(xdt_1, xdt_10) #!
+  instance$eval_batch(xdt)
+  if (instance$is_terminated || instance$terminator$is_terminated(archive)) break
+}
+```
+
+```{r}
+opdt = instance$archive$data()
+plot(y~batch_nr, data = opdt, type = "b")
+```
+
+We can see that in each iteration we evaluate two proposals. The first one belongs to the proposal made with lambda = 1.
+
+## Results for noisy optimization functions
+
+Instead of picking the x values that yielded the best y value we should take the noise into consideration.
+We can ask the surrogate for an estimation of a "noise-free" value of y.
+
+```{r}
+# result for noisy evals
+xydt = archive$data()
+surrogate$update(xydt = xydt[, c(archive$cols_x, archive$cols_y), with = FALSE], y_cols = archive$cols_y) #update surrogate model with new data
+surrogate$model$param_set$values$jitter = 0.001
+preds = surrogate$predict(xydt)
+best = which.max(preds$mean) # compare to which.max(xydt$y)
+instance$assign_result(xdt = xydt[best, archive$cols_x, with = FALSE], unlist(xydt[best, archive$cols_y, with = FALSE]))
+```
+
+
+
+
+
+
+
+
+
+

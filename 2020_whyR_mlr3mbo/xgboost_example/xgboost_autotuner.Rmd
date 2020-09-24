@@ -1,0 +1,187 @@
+---
+title: "AutoTuner xgBoost"
+author: "Marc Becker"
+date: "9/21/2020"
+output: html_document
+editor_options:
+  chunk_output_type: console
+params:
+  outer_folds: 5
+  models: TRUE
+  evals: 25
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!exists("params") || is.null(params)) {
+  params = list(outer_folds = 5, models = TRUE, evals = 25)
+}
+```
+
+```{r}
+library(mlr3)
+library(mlr3tuning)
+library(mlr3learners)
+library(paradox)
+
+print(params)
+
+lgr::get_logger("mlr3")$set_threshold("warn")
+
+task = tsk("pima")
+learner = lrn("classif.xgboost") # xgboost uses all cores automatically
+
+search_space = ParamSet$new(list(
+  ParamDbl$new("nrounds", lower = 200, upper = 2500),
+  ParamDbl$new("eta", lower = -7, upper = -5),
+  ParamDbl$new("max_depth", lower = 3, upper = 15, default = 3),
+  ParamDbl$new("colsample_bytree", lower = 0.3, upper = 1, ),
+  ParamDbl$new("subsample", lower = 0.3, upper = 1, default = 0.6)
+))
+
+search_space$trafo = function(x, param_set) {
+  x$nrounds = as.integer(x$nrounds)
+  x$eta = 2^x$eta
+  x$max_depth = as.integer(x$max_depth)
+  return(x)
+}
+
+resampling = rsmp("cv", folds = 2)
+measure = msr("classif.ce")
+
+terminator = trm("evals", n_evals = params$evals) # init design + 10 evals
+```
+
+```{r}
+set.seed(7823)
+
+library(mlr3mbo)
+library(mlr3learners)
+
+# normal mbo
+surrogate = SurrogateSingleCritLearner$new(learner = lrn("regr.km", covtype = "matern3_2", nugget.stability = 10^-8))
+surrogate$model$encapsulate = c(train = "callr", predict = "none") # prevents output during training
+acq_function = AcqFunctionEI$new(surrogate = surrogate)
+acq_optimizer = AcqOptimizerRandomSearch$new()
+
+tuner_mbo = TunerMbo$new(
+  loop_function = bayesop_soo,
+  acq_function = acq_function,
+  acq_optimizer = acq_optimizer,
+  args = list(n_design = 25))
+
+at_mbo = AutoTuner$new(
+  learner = learner,
+  resampling = resampling,
+  measure = measure,
+  terminator = terminator,
+  search_space = search_space,
+  tuner = tuner_mbo,
+  store_tuning_instance = params$model,
+  store_benchmark_result = params$model,
+  store_models = params$model)
+at_mbo$id = paste0(at_mbo$id, ".mbo")
+
+# mbo for noisy problems
+surrogate = SurrogateSingleCritLearner$new(learner = lrn("regr.km", nugget.estim = TRUE, covtype = "matern3_2", jitter = 0.001)) 
+# nugget.estim allows that y is not deterministic.
+# jitter is a workaround for regr.km that ensures that for regr.km returns the mean prediction and not the observed y, if the x value is exactly the same as during training.
+surrogate$model$encapsulate = c(train = "callr", predict = "none") # prevents output during training
+acq_function = AcqFunctionAEI$new(surrogate = surrogate)
+acq_optimizer = AcqOptimizerRandomSearch$new()
+
+tuner_mbo_noisy = TunerMbo$new(
+  loop_function = bayesop_soo,
+  acq_function = acq_function,
+  acq_optimizer = acq_optimizer,
+  args = list(n_design = 25),
+  result_function = result_by_surrogate_design
+  )
+
+at_mbo_noisy = AutoTuner$new(
+  learner = learner,
+  resampling = resampling,
+  measure = measure,
+  terminator = terminator,
+  search_space = search_space,
+  tuner = tuner_mbo_noisy,
+  store_tuning_instance = params$model,
+  store_benchmark_result = params$model,
+  store_models = params$model)
+at_mbo_noisy$id = paste0(at_mbo_noisy$id, ".mbo_noisy")
+
+
+# random search
+tuner_random = tnr("random_search")
+
+at_random = AutoTuner$new(
+  learner = learner,
+  resampling = resampling,
+  measure = measure,
+  terminator = terminator,
+  search_space = search_space,
+  tuner = tuner_random,
+  store_tuning_instance = params$model,
+  store_benchmark_result = params$model,
+  store_models = params$model)
+at_random$id = paste0(at_random$id, ".rnd")
+```
+
+```{r}
+library(data.table)
+
+task = tsk("spam")
+resampling_outer = rsmp("cv", folds = params$outer_folds)
+
+design = benchmark_grid(tasks = task, learners = list(at_mbo, at_mbo_noisy, at_random), resamplings = resampling_outer)
+```
+
+```{r}
+bmr = benchmark(design, store_models = TRUE)
+save.image(paste0("xgboost_autotuner_",paste0(paramsi, collapse = "_"), ".Rmd"))
+```
+
+```{r}
+library(mlr3viz)
+autoplot(bmr)
+```
+
+
+Tuning curves for one tuning run.
+Note, we did as many tuning runs as defined by `resampling_outer`.
+```{r, eval=isTRUE(params$model)}
+library(ggplot2)
+ggplot(bmr$resample_result(1)$data$state[[1]]$model$tuning_instance$archive$data(), aes(batch_nr, classif.ce)) +
+  geom_line() + coord_cartesian(ylim = c(0.045,0.055)) + ggtitle("MBO")
+```
+
+```{r, eval=isTRUE(params$model)}
+ggplot(bmr$resample_result(2)$data$state[[1]]$model$tuning_instance$archive$data(), aes(batch_nr, classif.ce)) +
+  geom_line() + coord_cartesian(ylim = c(0.045,0.055)) + ggtitle("MBO noisy")
+```
+
+```{r, eval=isTRUE(params$model)}
+ggplot(bmr$resample_result(3)$data$state[[1]]$model$tuning_instance$archive$data(), aes(batch_nr, classif.ce)) +
+  geom_line() + coord_cartesian(ylim = c(0.045,0.055)) + ggtitle("rs")
+```
+
+
+```{r, eval=isTRUE(params$model)}
+# mbo
+# tuning error
+bmr$resample_result(1)$data$state[[1]]$model$tuning_instance$result
+bmr$resample_result(1)$data$state[[2]]$model$tuning_instance$result
+#...
+# validated error
+bmr$resample_result(1)$aggregate()
+# mbo noisy validated error
+bmr$resample_result(2)$aggregate()
+# random search validated error
+bmr$resample_result(3)$aggregate()
+```
+
+```{r, eval=isTRUE(params$model)}
+bmr$data$state[[2]]$model$tuning_instance$result
+```
+
+
