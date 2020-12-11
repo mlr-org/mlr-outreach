@@ -1,6 +1,6 @@
 # mlr3: Machine Learning, Pipelines and AutoML in R
 
-# [tinyurl.com/mlr3stp](tinyurl.com/mlr3stp)
+# [tinyurl.com/mlr3stp](https://tinyurl.com/mlr3stp)
 
 2020-12-11 17:00 GMT+1
 
