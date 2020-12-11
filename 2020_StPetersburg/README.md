@@ -1,4 +1,4 @@
-# WhyR Webinar: Pipelines and AutoML with `mlr3`
+# mlr3: Machine Learning, Pipelines and AutoML in R
 
 2020-12-11 17:00 GMT+1
 
