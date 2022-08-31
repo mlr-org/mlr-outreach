@@ -1,0 +1,503 @@
+---
+# subtitle: {mlr3spatiotempcv} \\& {mlr3spatial}
+title: "{mlr3} - spatial modeling"
+format:
+  revealjs:
+    logo: assets/img/mlr.png
+    footer: "mlr-org team - [https://mlr-org.com](https://mlr-org.com)"
+    theme: [../../metropolis.scss]
+    slide-number: true
+    numbers: true
+    menu: false
+    width: 960 # default 960
+    height: 700
+    margin: 0.04 # default 0.1
+    # height: 800 # default 750
+    pdf-separate-fragments: true
+    auto-stretch: false
+    chalkboard: true
+    toc: true
+    toc-depth: 1
+highlight-style: github
+author: Patrick Schratz
+# bibliography: ../../bibliography.bib
+# biblio-style: apalike
+# citation-location: margin
+date: 2022-09-01
+execute:
+  cache: true
+  cache.lazy: false
+  eval: true
+  echo: true
+---
+
+##
+
+:::{.callout-note}
+
+## Disclaimer
+
+This block builds upon the basics from the **first block earlier this morning**.
+
+We will **not** cover
+
+- Tasks
+- Learners
+- Tuners
+- {mlr3} dictionaries
+- mlr3pipelines
+
+(in detail) in this block.
+
+Don't worry! If you have basic knowledge in modeling, you should be good! 😎️
+:::
+
+# (1) {mlr3} + spatiotemporal data
+
+## {mlr3} + spatiotemporal data
+
+- How can {mlr3} help in spatiotemporal/environmental/ecological modeling?
+
+- What things do I need to be aware of?
+
+- What is still missing?
+
+- How can you contribute?
+
+## {mlr3} + spatiotemporal data
+
+<br>
+[{mlr3spatiotempcv}](https://github.com/mlr-org/mlr3spatiotempcv)
+
+{{< fa solid arrow-right >}} Spatiotemporal **resampling methods** (for cross-validation)
+
+<br>
+
+[{mlr3spatial}](https://github.com/mlr-org/mlr3spatial)
+
+{{< fa solid arrow-right >}} Spatial **DataBackends** and (parallelized) **prediction** support
+
+<br>
+
+::: aside
+Planned but unfinished (and currently unmaintained): [{mlr3temporal}](https://github.com/mlr-org/mlr3temporal).
+Please reach out to us if you have knowledge in this area and would like to contribue <i class="fas fa-hands-helping"></i>
+:::
+
+# (2) mlr3spatial
+
+## mlr3spatial - What's inside the tin?
+
+<br>
+
+### Raster data
+<i class="fas fa-check" style="color:green;"></i>  `DataBackendRasterBrick` & `DataBackendRasterStack` for [{raster}](https://cran.r-project.org/web/packages/raster/index.html)
+
+<i class="fas fa-check" style="color:green;"></i>  `DataBackendSpatRaster` for [{terra}](https://cran.r-project.org/web/packages/terra/index.html)
+
+<i class="fas fa-check" style="color:green;"></i>  `DataBackendStars` for [{stars}](https://cran.r-project.org/web/packages/stars/index.html)
+
+<br>
+
+### Vector data
+
+Supported via `as_task_classif_st()` and `as_task_regr_st()` (data input via `sf` objects)
+
+<br>
+
+## mlr3spatial - What's inside the tin?
+
+<br>
+
+### Enhanced prediction
+
+<i class="fas fa-check" style="color:green;"></i>  Parallel (future-based) predictions via `predict_spatial()`
+
+<i class="fas fa-check" style="color:green;"></i> **Memory-aware** chunked predictions
+
+## mlr3spatial
+
+- Create a `TaskClassifST` with `land_cover` as the response
+
+- Train a Random Forest learner ({ranger} package)
+
+```{r, cache.lazy=FALSE}
+library(sf)
+library("mlr3spatial")
+
+lrn = lrn("classif.ranger")
+
+leipzig_vector = read_sf(system.file("extdata", "leipzig_points.gpkg",
+  package = "mlr3spatial"), stringsAsFactors = TRUE)
+
+tsk = as_task_classif_st(leipzig_vector, target = "land_cover")
+
+lrn$train(tsk)
+```
+
+
+## mlr3spatial
+
+<!-- <i class="far fa-newspaper"></i> Also available as vignette ["Getting Started"](https://mlr3spatial.mlr-org.com/articles/meuse.html). -->
+
+```{r mlr3spatial-ex-3, warning=FALSE, eval=FALSE}
+leipzig_raster = terra::rast(system.file("extdata", "leipzig_raster.tif",
+  package = "mlr3spatial"))
+tsk_predict = as_task_unsupervised(leipzig_raster)
+
+# predict land cover map
+pred = predict_spatial(tsk_predict, lrn)
+pred
+```
+
+```{r, echo=FALSE}
+library(terra)
+# create prediction task
+leipzig_raster = rast(system.file("extdata", "leipzig_raster.tif",
+  package = "mlr3spatial"))
+tsk_predict = as_task_unsupervised(leipzig_raster)
+
+# predict land cover map
+pred = predict_spatial(tsk_predict, lrn)
+# set the output file and predict with the learner
+pred
+
+```
+
+## mlr3spatial
+
+```{r mlr3spatial-ex-4, fig.align='center', cache.lazy=FALSE}
+plot(pred, col = c("#440154FF", "#443A83FF", "#31688EFF",
+  "#21908CFF", "#35B779FF", "#8FD744FF", "#FDE725FF"))
+```
+
+## mlr3spatial - parallel prediction
+
+<br>
+
+{{< fa solid chevron-right >}} Spatial prediction take quite some time due to the high amount of points (pixels) to be predicted.
+In remote sensing the pixel count can be **millions** of points or more.
+
+<br>
+
+{{< fa solid chevron-right >}} While some spatial packages come with built-in parallelization, {mlr3} provides a generalized (and eventually more efficient) methodology to speed up large prediction tasks.
+
+:::aside
+{mlr3spatial} vignette: ["Benchmarking parallel prediction"](https://mlr3spatial.mlr-org.com/dev/articles/benchmark.html){preview-link="true"}
+:::
+
+## mlr3spatial - parallel prediction
+
+:::: {.columns}
+
+::: {.column width="30%"}
+:::{.small-font}
+- 500 MB file on disk
+
+- ~ 25 Mio. values
+
+- 1m resolution
+
+- 2 layers
+
+- `demo_stack_spatraster(500)`
+
+:::
+:::
+
+::: {.column width="56%"}
+![](https://mlr3spatial.mlr-org.com/dev/articles/plot-benchmark-1.png)
+:::
+
+::::
+
+
+# (3) mlr3spatiotempcv
+
+## mlr3spatiotempcv
+
+<br>
+
+{{< fa solid chevron-right >}} Spatiotemporal resampling methods for {mlr3}
+
+<br>
+
+{{< fa solid chevron-right >}} Aims to simplify/structure the jungle of spatiotemporal resampling methods
+
+<br>
+
+{{< fa solid pen >}} Submitted article (JSS)
+
+## mlr3spatiotempcv
+
+<br>
+
+<i class="fas fa-check" style="color:green;"></i>  Generic `ggplot2::autoplot()` for all resampling methods
+
+<br>
+
+<i class="fas fa-check" style="color:green;"></i>  Currently wrapping **8** resampling methods from **4** packages
+
+<br>
+
+{{< fa solid box-open >}} {blockCV}
+
+{{< fa solid box-open >}} {sperrorest}
+
+{{< fa solid box-open >}} {CAST}
+
+{{< fa solid box-open >}} {skmeans}
+
+## mlr3spatiotempcv
+
+<br>
+Spatiotemporal performance estimation
+
+:::{.callout-important appearance="simple"}
+Non-spatial resampling methods **overestimate** model performance due to **spatial autocorrelation** betweeen training and test data.
+:::
+
+There is **no single best** method.
+The method choice should be **target-oriented**:
+
+{{< fa solid chevron-right >}} What do I want to predict?
+
+{{< fa solid chevron-right >}} How is my data grouped?
+
+## mlr3spatiotempcv - available methods
+
+```{r, eval=FALSE}
+as.data.table(rsmps())[key %like% "spcv|sptcv", c("key", "label")]
+```
+
+```{r echo=FALSE}
+options(width = 999)
+library(data.table)
+as.data.table(rsmps())[key %like% "spcv|sptcv", c("key", "label")]
+```
+
+:::aside
+[{{< fa solid link >}} Searchable table on mlr-org.com](https://mlr-org.com/resamplings.html){preview-link="true"}
+:::
+
+## mlr3spatiotempcv - custom grouping
+
+{mlr3} supports custom observation grouping via column role `group` (see [https://mlr3book.mlr-org.com/basics.html#tasks-roles](https://mlr3book.mlr-org.com/basics.html#tasks-roles)).
+
+{{< fa solid chevron-right >}} Features of this group will always be together - either in train or test during resampling.
+
+{{< fa solid chevron-right >}} Initialize via `<Task>$col_roles$group = "<feature name>"`
+
+:::{.callout-warning appearance="simple"}
+The level count of the grouping factor must be >= fold count.
+:::
+
+:::{.callout-tip appearance="simple"}
+This method is a mix between fixed groups and fold variety - the higher the level count of the grouping variable, the more fold combinations are possible.
+:::
+
+## mlr3spatiotempcv - predefined folds
+
+{mlr3} supports using fully predefined folds via `rsmp("custom_cv")`
+
+{{< fa solid chevron-right >}} Option 1: supply a list of predefined folds (train & test)
+
+{{< fa solid chevron-right >}} Option 2: specify a factor which defines the folds
+
+```{r}
+task = tsk("penguins")$filter(1:10)
+
+# Instantiate Resampling:
+custom_cv = rsmp("custom_cv")
+f = factor(c(rep(letters[1:3], each = 3), NA))
+custom_cv$instantiate(task, f = f)
+custom_cv$instance
+```
+
+## mlr3spatiotempcv
+
+<br>
+
+There is a *ongoing* debate whether spatiotemporal resampling methods are **too pessimistic**
+
+::: aside
+- Wadoux, Alexandre MJ-C., et al. "Spatial cross-validation is not the right way to evaluate map accuracy." Ecological Modelling 457 (2021): 109692.
+- Meyer, Hanna, and Edzer Pebesma. "Machine learning-based global maps of ecological variables and the challenge of assessing them." Nature Communications 13.1 (2022): 1-4.
+- De Bruin, Sytze, et al. "Dealing with clustered samples for assessing map accuracy by cross-validation." Ecological Informatics 69 (2022): 101665
+
+:::
+
+## mlr3spatiotempcv - example
+
+- Spatial cross-validation with Random Forest
+
+- Predicting **landslide** events (0/1) in Ecuador
+
+```{r mlr3spatiotempcv-ex}
+library("mlr3spatiotempcv")
+
+# create 'sf' object from example data
+data_sf = sf::st_as_sf(ecuador, coords = c("x", "y"), crs = 32717)
+
+data_sf
+```
+
+## mlr3spatiotempcv
+
+```{r mlr3spatiotempcv-ex11}
+# create ClassifST task
+tsk = as_task_classif_st(data_sf,
+  id = "ecuador_sf", target = "slides", positive = "TRUE"
+)
+print(tsk)
+```
+
+## mlr3spatiotempcv
+
+```{r, eval = FALSE}
+#| code-line-numbers: "1|3-5|7-9|11-15|17"
+lrn_rf = lrn("classif.ranger", predict_type = "prob")
+
+tsk = as_task_classif_st(data_sf,
+  id = "ecuador_sf", target = "slides", positive = "TRUE"
+)
+
+# (Repeated) spatial k-means clustering
+resampling_sp = rsmp("repeated_spcv_coords",
+  folds = 4, repeats = 2)
+
+rr_sp = resample(
+  task = tsk,
+  learner = lrn_rf,
+  resampling = resampling_sp
+)
+
+rr_sp$aggregate(measures = msr("classif.ce"))
+```
+
+```{r mlr3spatiotempcv-ex2, cache=TRUE, cache.lazy=FALSE, echo=FALSE}
+library(mlr3)
+library(mlr3spatiotempcv)
+library(mlr3learners)
+library(sf)
+
+lgr::get_logger("mlr3")$set_threshold("warn")
+
+# create 'sf' object from example data
+data_sf = st_as_sf(ecuador, coords = c("x", "y"), crs = 32717)
+
+lrn_rf = lrn("classif.ranger", predict_type = "prob")
+resampling_sp = rsmp("repeated_spcv_coords",
+  folds = 4, repeats = 2
+)
+tsk = as_task_classif_st(data_sf,
+  id = "ecuador_sf", target = "slides", positive = "TRUE"
+)
+
+# FIXME: for some reason we get namespace hickups with caching in quarto
+# using a fake chunk therefore, maybe this is fixed in newer versions?
+rr_sp = mlr3::resample(
+  task = tsk,
+  learner = lrn_rf,
+  resampling = resampling_sp
+)
+
+rr_sp$aggregate(measures = msr("classif.ce"))
+```
+
+## mlr3spatiotempcv
+
+```{r mlr3spatiotempcv-ex3, fig.retina=1, dpi=150, fig.dim=c(8, 3), fig.align='center'}
+autoplot(resampling_sp, tsk, fold_id = c(1:2), size = 0.7) *
+  ggplot2::scale_y_continuous(breaks = seq(-3.97, -4, -0.01)) *
+  ggplot2::scale_x_continuous(breaks = seq(-79.06, -79.08, -0.01))
+```
+
+## mlr3spatiotempcv - more resources
+
+- The **"Spatiotemporal Analysis"** chapter in the mlr3book ([https://mlr3book.mlr-org.com/special.html#spatiotemporal](https://mlr3book.mlr-org.com/special.html#spatiotemporal))
+
+- Function reference of {mlr3spatiotempcv}: [https://mlr3spatiotempcv.mlr-org.com/](https://mlr3spatiotempcv.mlr-org.com/)
+
+- Literature:
+  - [Roberts et al. 2017](https://doi.org/10.1111/ecog.02881)
+  - [Schratz et al. 2019](https://doi.org/10.1016/j.ecolmodel.2019.06.002)
+  - [Valavi et al. 2019](https://doi.org/10.1111/2041-210X.13107)
+  - [Schratz et al. 2022](https://doi.org/10.48550/arXiv.2110.12674)
+
+## mlr3spatiotempcv
+
+What about (spatio)-temporal methods?
+
+- Two resampling methods (`"sptcv_cstf"` and `"sptcv_cluto"`) support both space and time
+
+- Spatiotemporal resampling is non-trivial due to the involvment of multiple dimensions
+
+- We would love to see help/contributions from the community for {mlr3temporal}
+
+## Acknowledgements
+
+:::: {.columns}
+
+::: {.column width="60%"}
+Thanks to **Marc Becker** for the help developing {mlr3} spatial packages.
+
+<br>
+
+🤙️ to all mlr-org team members and contributors!
+
+:::
+
+::: {.column width="30%"}
+![](assets/img/marc.jpeg)
+:::
+
+::::
+
+Thanks to mlr-org's GitHub sponsors (especially **OpenGeoHub** and **cynkra**).
+This helps us to organize developer workshops and pay for domain costs.
+
+Thanks to **you** for being interested in using {mlr3}!
+
+## Meta information
+
+:::: {.columns}
+
+::: {.column width="28%"}
+### Block 1
+
+*Time: ~ 1h 15min*
+
+1. ~~mlr3 overview~~
+2. ~~Building blocks~~
+3. ~~Hands-on tutorial~~
+
+:::
+
+::: {.column width="34%"}
+### Block 2
+
+*Time: ~ 45 min*
+
+1. ~~mlr3 spatial extensions~~
+2. Hands-on tutorial
+
+:::
+
+::: {.column width="28%"}
+
+### Block 3
+
+*Time: ~ 1h*
+
+1. Use case example from Leandro Parente
+
+:::
+
+::::
+
+## And now... 5 minutes break and then 🐶️
+
+<div align="center">
+<iframe src="https://giphy.com/embed/3oKIPnAiaMCws8nOsE" width="457" height="480" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/cat-kitten-computer-3oKIPnAiaMCws8nOsE">via GIPHY</a></p>
+</div>

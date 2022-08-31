@@ -1,0 +1,6 @@
+/.quarto/
+*_cache/
+*.lua
+quarto-ext/
+*_files/
+*.html

@@ -1,0 +1,990 @@
+---
+title: "Machine learning with {mlr3}"
+subtitle: An introduction
+format:
+  revealjs:
+    logo: assets/img/mlr.png
+    footer: "[https://mlr-org.com](https://mlr-org.com)"
+    theme: [../../metropolis.scss]
+    slide-number: true
+    numbers: true
+    menu: false
+    footnotes-hover: true
+    width: 960 # default 960
+    height: 700
+    margin: 0.04 # default 0.1
+    # height: 800 # default 750
+    pdf-separate-fragments: true
+    auto-stretch: false
+    chalkboard: true
+    toc: true
+    toc-depth: 1
+highlight-style: github
+author: Patrick Schratz
+date: 2022-09-01
+execute:
+  cache: true
+  cache.lazy: false
+  eval: true
+  echo: true
+---
+
+## About me
+
+```{r setup, include = FALSE, eval=TRUE}
+library("mlr3verse", quietly = TRUE)
+library("mlr3tuning", quietly = TRUE)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+:::: {.columns}
+
+::: {.column width="45%"}
+
+![](assets/img/ich.jpeg){width="30%" fig-align="center"}
+
+{{< fa solid chevron-right >}} M.Sc. Geoinformatics, PhD Geoinformatics
+
+{{< fa solid chevron-right >}} Former research fellow at University of **Jena** and LMU **Munich**
+
+{{< fa solid chevron-right >}} Now Devops/R consultant in Zurich, Switzerland
+
+:::
+
+::: {.column width="45%"}
+::: {.colored-column}
+- Unix & R enthusiast
+
+- [Gitea](https://gitea.io/en-us/) ([https://gitea.io](https://gitea.io)) contributor
+
+- **mlr-org** core team
+  - [mlr3](https://github.com/mlr-org/mlr3) - https://github.com/mlr-org/mlr3
+  - [mlr](https://github.com/mlr-org/mlr) -  https://github.com/mlr-org/mlr
+
+:::
+:::
+
+::::
+
+## Professional work
+
+:::: {.columns}
+
+::: {.column width="46%"}
+- Swiss-based R consulting company (Zurich), founded in 2018 - [www.cynkra.com](www.cynkra.com)
+
+- 10-15 people from various countries
+
+- Free and Open-Source (FOSS) philosophy
+
+- [RStudio Certified Partner](https://www.rstudio.com/certified-partners/)
+
+:::
+
+::: {.column width="46%"}
+![](assets/img/cynkra-team.png)
+:::
+
+::::
+
+## Meta information
+
+Resources: FIXME:
+
+`usethis::use_course()` FIXME:
+
+:::: {.columns}
+
+::: {.column width="30%"}
+
+### Block 1
+
+*Time: ~ 1h 15 min*
+
+1. {mlr3} overview
+1. Building blocks
+1. Hands-on tutorial
+
+:::
+
+::: {.column width="30%"}
+### Block 2
+
+*Time: ~ 45 min*
+
+1. {mlr3} spatial extensions
+2. Hands-on tutorial
+
+:::
+
+::: {.column width="30%"}
+
+### Block 3
+
+*Time: ~ 1h*
+
+1. Use case example from Leandro Parente
+
+<!-- ::: -->
+:::
+
+::::
+
+## The mlr-org team (meta)
+
+- Originally created by Bernd Bischl (**2012**, {mlr} package)
+- 2019: {mlr} {{< fa solid arrow-right >}} {mlr3} @useR! in Toulouse
+
+<br>
+
+- Core team: 5 people, extended ~ 10 people (most are German)
+- Supported by **Chair of Statistical learning and Data Science** (LMU Munich) with two research engineers
+- Scientific leads: <u>Bernd Bischl</u> & <u>Michel Lang</u>
+
+## The mlr-org team
+
+::: {.small-font}
+Missing: Martin Binder, Sebastian Fischer, Damir Pulatov, Jakob Richter, Raphael Sonabend
+:::
+
+![](assets/img/mlr-org-team.jpeg){width="72%" fig-align="center"}
+
+# (1) {mlr3} overview
+
+## {{< fa solid question >}} Why use mlr3
+
+*Users* want to efficiently **train**/**predict**/**benchmark**
+
+- many **methods**
+
+- on many **datasets**
+
+- using different **tuning methods**
+
+- using different **feature selection methods**
+
+- preferably using the **same syntax**
+
+<br>
+
+{{< fa solid arrow-right >}} *Design principles* of {mlr3}
+
+## Why do we need a framework?
+
+The problem: Many different ways to define features, data, hyperparameters, ...
+
+:::: {.columns}
+
+::: {.column width="45%"}
+
+### e1071
+
+Target: formula notation
+
+Data: data.frame
+
+Parameters: direct argument
+
+```{r, eval=FALSE, echo=TRUE}
+e1071::svm(
+  Species ~ .,
+  data = iris,
+  cost = 0.1
+)
+```
+:::
+
+::: {.column width="45%"}
+
+### XGBoost
+
+Target: vector
+
+Data: Matrix
+
+Parameters: list
+
+```{r, eval=FALSE, echo=TRUE}
+xgboost::xgboost(
+  label = iris$Species,
+  data = as.matrix(iris[1:4]),
+  params = list()
+)
+```
+:::
+
+::::
+
+## R6 – All you need to know
+
+mlr3 uses the *R6* class system.
+R6 in a nutshell:
+
+<!-- ::: {.r-stack} -->
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Objects are created using `<Class>$new()` (or using the )
+
+```{r}
+task = TaskClassif$new("iris", iris, "Species")
+```
+:::
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Objects have fields that contain information about the object
+
+```{r t1}
+task$nrow
+```
+:::
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Objects have methods that are called like functions:
+
+```{r}
+task$filter(rows = 1:10)
+```
+:::
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Methods may change (“mutate”) the object (reference semantics)!
+
+```{r t2}
+task$nrow
+```
+:::
+
+<!-- ::: -->
+
+## Building blocks overview
+
+![](assets/img/sketch_methods.png){fig-align="center"}
+
+## Motivation: Make benchmarking easy!
+
+- Interfaces to **train** and **predict** methods,
+
+- Interfaces to learner **hyperparameters** and **optimizers** (tuning),
+
+- **Feature selection**
+
+- **Resampling** (performance estimation),
+
+- **Preprocessing** independently from the data,
+
+- **Parallelization**, and
+
+- **Error handling**
+
+## Is it worth to "learn" mlr3?
+
+![](assets/img/wheel.jpeg){width="80%" fig-align="center"}
+
+::: {.center}
+{{< fa solid chevron-right >}} You decide!
+:::
+
+## Is it worth to "learn" mlr3?
+
+::: {.fragment}
+Reduce mistakes by relying on **tested functionality**
+
+  - Predefined meaningful performance measures
+  - Various resampling strategies
+  - Selected suite of default learners ({mlr3learners})
+  - Extensions for niche field modeling (survival, spatial, cluster, etc.)
+:::
+
+::: {.fragment}
+**Easily scale up** your benchmark matrix
+
+  - Integrated parallelization
+  - Benchmarking helpers
+:::
+
+## {mlr3} in a nutshell
+
+```{r mlr3-config, echo = FALSE}
+library("mlr3verse", quietly = TRUE)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+::: {.r-stack}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "1-3|5-6|8-9|11-15|17-18|20-21"
+library("mlr3verse", quietly = TRUE)
+lgr::get_logger("mlr3")$set_threshold("warn")
+set.seed(42)
+
+# example tasks
+tasks = tsks(c("iris", "german_credit"))
+
+# from {mlr3learners}
+learners = lrns(c("classif.rpart", "classif.ranger"))
+
+# create a benchmark matrix
+# incl. cross-validation
+bmg = benchmark_grid(
+  tasks, learners, rsmp("cv")
+)
+
+# execute
+bmr = benchmark(bmg)
+
+# visualize by classification error
+autoplot(bmr, measure = msr("classif.ce"))
+```
+
+::: {.fragment}
+```{r, echo=FALSE}
+#| fig-align: center
+library("mlr3verse", quietly = TRUE)
+lgr::get_logger("mlr3")$set_threshold("warn")
+set.seed(42)
+tasks = tsks(c("iris", "german_credit"))
+learners = lrns(c(
+  "classif.rpart",
+  "classif.ranger"
+))
+bmg = benchmark_grid(
+  tasks, learners, rsmp("cv")
+)
+bmr = benchmark(bmg)
+autoplot(bmr, measure = msr("classif.ce"))
+```
+:::
+
+:::
+
+# (2) Principles of mlr3
+
+## Principles of mlr3
+
+:::: {.columns}
+
+::: {.column width="55%"}
+Overcome limitations of S3 with the help of **{R6}**
+
+  - Truly object-oriented: data and methods live in the same object
+  - Make use of inheritance
+  - Make slight use of reference semantics
+
+:::
+
+::: {.column width="35%"}
+![](assets/img/sketch_inheritance.png)
+:::
+
+::::
+
+## Principles of mlr3
+
+::: {.fragment}
+Embrace **{data.table}**
+
+  - Fast operations for tabular data
+  - List columns to arrange complex objects in tabular structure
+:::
+
+::: {.fragment}
+Be **light on dependencies**
+
+  - {R6}, {data.table}, {lgr}, {future}
+  - {{< fa solid plus >}} some of our own (helper) packages ({backports}, {checkmate})
+  - Additional packages are loaded from {mlr3} extension libraries
+:::
+
+## The mlr3verse
+
+![](https://raw.githubusercontent.com/mlr-org/mlr3/main/man/figures/mlr3verse.svg)
+
+# (3) Building blocks
+
+## Overview building blocks
+
+<br>
+
+:::: {.columns}
+
+::: {.column width="25%"}
+
+### <u>*Meta*</u>
+
+- Learner
+- Task
+
+:::
+
+::: {.column width="65%"}
+
+### <u>*Apply*</u>
+
+- Preprocessing (pipelines)
+- Tuning
+- Feature selection
+- Benchmarking/Resampling (performance evaluation)
+- Visualization
+
+:::
+
+::::
+
+# (4) General modeling approach
+
+## General modeling approach
+
+:::: {.columns}
+
+::: {.column width="45%"}
+::: {.fragment}
+#### <u>*Train (+tune) & Predict*</u>
+
+1. Train on all data points
+1. Predict to "new" data (i.e. without response) {{< fa solid arrow-right >}} unknown performance
+
+- `model$train()`
+- `model$predict()`
+
+{{< fa solid chevron-right >}} Result: "final" model & "final" predictions
+:::
+:::
+
+::: {.column width="45%"}
+::: {.fragment}
+#### <u>*Performance evaluation*</u>
+
+- **Split initial data** into train/test via resampling methods
+- `resample()`: Train (+tune) **multiple times** via (one model, one task)
+- `benchmark()`: Train (+tune) **multiple times** via (multiple models, multiple tasks)
+:::
+:::
+
+::::
+
+# (5) (Nested) Resampling
+
+## (Nested) Resampling
+
+![](assets/img/cross-validation_farbig.png){fig-align="center"}
+
+::: aside
+Schratz et al. (2019). Hyperparameter tuning and performance assessment of statistical and machine-learning algorithms using spatial data. Ecological Modelling, 406, 109-120.
+:::
+
+# (6) Essential functions
+
+## Essential functions - object creation
+
+| Name                | Function                                   |
+| ------------------- | :----------------------------------------- |
+| `tsk()`, `tsks()`   | Create one or more *tasks*                 |
+| `lrn()`, `lrns()`   | Create one or more *learners*              |
+| `msr()`, `msrs()`   | Create one or more *measures*              |
+| `rsmp()`, `rsmps()` | Create one or more *resampling* strategies |
+| `tnr()`, `tnrs()`   | Create one or more *tuning* strategies     |
+
+:::{.callout-tip}
+Calling these without arguments returns their respective dictionaries!
+:::
+
+## Essential functions - learners dictionary
+
+```{r, echo=TRUE}
+#| cache: true
+#| font-size: "10px"
+print(as.data.table(lrns())[, c("key", "label", "task_type")], topn = 15)
+```
+
+## Essential functions - execution
+
+| Name                               | Function                                                |
+| ---------------------------------- | :------------------------------------------------------ |
+| `$train()`                         | (R6 method) Train a learner on a task                   |
+| `$predict()`, `$predict_newdata()` | (R6 method) Predict model on task data OR external data |
+| `resample()`                       | Performance est. for a *single* learner                 |
+| `benchmark()`                      | Performance est. for *multiple* learners & tasks        |
+| `autoplot()`                       | Visualization of `*Result` objects                      |
+
+:::{.callout-tip collapse="true" appearance="simple"}
+
+Multiple `ResampleResult` objects can be converted into a `BenchmarkResult` object via `as_benchmark_result()`
+:::
+
+<!-- ## Train & Predict Workflow
+
+![](assets/img/train-predict.png){width="90%"} -->
+
+# (7) Beyond "simple" data
+
+## Beyond "simple" data
+
+::: {.fragment}
+**Problem**: Many modeling challenges require additional effort beyond numeric and categorical data.
+This applies to both target and feature variables.
+:::
+
+::: {.fragment}
+:::: {.columns}
+
+::: {.column width="45%"}
+- Clustered data
+- Functional data
+- Ordinal data
+:::
+
+::: {.column width="45%"}
+- Spatial data
+- Survival data
+- Temporal data
+:::
+
+::::
+:::
+
+::: {.fragment}
+And what about...
+
+- GPU training
+- Multiple targets
+:::
+
+## The mlr3verse
+
+{{< fa solid laptop-code >}} Continuous development and improvements
+
+![](https://raw.githubusercontent.com/mlr-org/mlr3/main/man/figures/mlr3verse.svg){width="90%"}
+
+# (8) Parallelization & Ensembles
+
+## Parallelization & Ensembles {{< fa solid wind >}}
+
+After your first ML pipeline you usually want to make the next step:
+
+<br>
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Try more learners on the same data
+
+{{< fa solid chevron-right >}} Extend your tuning budget
+
+{{< fa solid chevron-right >}} Create ensemble models (i.e. fusioning model predictions)
+:::
+
+<br>
+
+::: {.fragment}
+{{< fa solid arrow-right >}} Parallelization: {future}
+
+{{< fa solid arrow-right >}} Ensembles: {mlr3pipelines} via `Graphs`
+:::
+
+<br>
+
+## Parallelization
+
+```{r echo=FALSE}
+library(mlr3)
+library(lgr)
+lgr::get_logger("mlr3")$set_threshold("warn")
+```
+
+:::: {.columns}
+
+::: {.column width="46%"}
+::: {.fragment}
+### Sequential
+
+```{r echo=TRUE, eval=FALSE}
+#| code-line-numbers: "2"
+# only for explicitness
+plan("sequential")
+
+task = tsk("spam")
+learner = lrn("classif.ranger")
+resampling = rsmp("repeated_cv",
+  repeats = 2)
+
+time = Sys.time()
+resample(task, learner, resampling)
+Sys.time() - time
+```
+```{r echo=FALSE}
+get_logger("mlr3")$set_threshold("warn")
+library(future)
+
+# only for explicitness
+plan("sequential")
+
+task = tsk("spam")
+learner = lrn("classif.ranger")
+resampling = rsmp("repeated_cv",
+  repeats = 2)
+
+time = Sys.time()
+resample(task, learner, resampling)
+Sys.time() - time
+```
+:::
+:::
+
+::: {.column width="46%"}
+::: {.fragment}
+### Parallel (2 cores)
+
+```{r, eval=FALSE}
+#| code-line-numbers: "2"
+# automatic parallelization
+plan("multisession", workers = 2)
+
+task = tsk("spam")
+learner = lrn("classif.ranger")
+resampling = rsmp("repeated_cv",
+  repeats = 2)
+
+time = Sys.time()
+resample(task, learner, resampling)
+Sys.time() - time
+```
+```{r , echo=FALSE}
+#| code-line-numbers: "4"
+#| cache: true
+get_logger("mlr3")$set_threshold("warn")
+
+# automatic parallelization
+future::plan("multisession", workers = 2)
+
+task = tsk("spam")
+learner = lrn("classif.ranger")
+resampling = rsmp("repeated_cv",
+  repeats = 2)
+
+time = Sys.time()
+resample(task, learner, resampling)
+Sys.time() - time
+```
+:::
+:::
+
+::::
+
+## Parallelization - Important remarks  👇️
+
+####
+
+::: {.fragment}
+:::{.callout-tip appearance="simple"}
+{mlr3} **automatically parallizes tasks that can be parallelized** when defining a future plan
+Calling these without arguments returns their respective dictionaries!
+:::
+:::
+
+::: {.fragment}
+:::{.callout-tip appearance="simple"}
+**Parallelization comes with overhead**: splitting and collecting results. For tasks < 10s, sequential runs are faster.
+:::
+:::
+
+::: {.fragment}
+:::{.callout-tip appearance="simple"}
+**Implicit parallelization of learners is turned off by default** in {mlr3} to avoid conflicts with {future} and duplicate parallelization.
+:::
+:::
+
+## Encapsulation
+
+- Spawns a separate R process to train the learner
+- Learner may segfault **without tearing down the session**
+- Logs are captured
+- Possibilty to have a fallback to create predictions
+
+```r
+learner$encapsulate = c(train = "callr", predict = "callr")
+
+# just train normally
+learner$train(task)
+
+# inspect logs and warnings
+learner$log
+learner$warnings
+```
+
+## Progress bars
+
+```{r, eval=FALSE}
+# create benchmark
+tasks = lapply(c("penguins", "sonar"), tsk)
+learners = lapply(c("classif.featureless", "classif.rpart"), lrn)
+resamplings = rsmp("repeated_cv", folds = 3, repeats = 50)
+design = benchmark_grid(tasks, learners, resamplings)
+
+progressr::handlers("progress")
+progressr::with_progress({
+  bmr = benchmark(design)
+})
+```
+
+```{r, eval=TRUE, echo=FALSE}
+# suprpress logging via {lgr}
+lgr::get_logger("mlr3")$set_threshold("warn")
+
+# create benchmark
+tasks = lapply(c("penguins", "sonar"), tsk)
+learners = lapply(c("classif.featureless", "classif.rpart"), lrn)
+resamplings = rsmp("repeated_cv", folds = 3, repeats = 50)
+design = benchmark_grid(tasks, learners, resamplings)
+
+progressr::handlers("progress")
+progressr::with_progress({
+  bmr = benchmark(design)
+})
+```
+
+![](assets/img/progressr.gif){fig-align="center"}
+
+# (9) Model optimization
+
+## Model optimization
+
+<br>
+
+### Motivation
+
+:::{.callout-tip appearance="minimal" collapse=true}
+## Tuning
+
+Search for optimal hyperparameter configurations on the given data {{< fa solid arrow-right >}} best performance
+:::
+
+:::{.callout-warning appearance="minimal" collapse=true}
+## Feature selection
+
+Reduce model complexity and feature count
+:::
+
+
+## Tuning - considerations
+
+- **Tuning space**: Hyperparameter ranges to optimize
+- **Tuning strategy/method**: How to optimize hyperparameters
+- **Tuning budget**: time-based, iteration-based, performance-based
+
+:::{.callout-tip appearance="simple"}
+{mlr3} provides many (advanced) tuning strategies
+:::
+
+:::: {.columns}
+
+::: {.column width="45%"}
+```{r}
+#| echo: true
+tnrs()
+```
+:::
+
+::: {.column width="45%"}
+- <u>**Basic**</u>: design points, grid search, random search
+- <u>**Advanced**</u>: cmaes, gensa, irace, nloptr
+:::
+
+::::
+
+## Tuning - {mlr3} approaches
+
+<br>
+<br>
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Standalone via `tune()` on task + learner + tuning strategy
+:::
+
+<br>
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Encapsulated in a benchmark by creating an "AutoTuner", i.e. a learner which tunes itself when calling `$train()`
+:::
+
+## Tuning - {mlr3} approaches
+
+```{r, eval = FALSE, echo = T}
+at = auto_tuner(
+  method = tnr("random_search"), term_evals = 4,
+  resampling = rsmp("holdout"), measure = msr("classif.ce"),
+  learner = lrn("classif.rpart", cp = to_tune(1e-04, 1e-1, logscale = TRUE))
+  )
+
+at$train(tsk("pima"))
+```
+
+```{r, cache = TRUE, cache.lazy=FALSE, echo=FALSE}
+library(mlr3tuning)
+lgr::get_logger("mlr3")$set_threshold("warn")
+lgr::get_logger("bbotk")$set_threshold("warn")
+at = auto_tuner(
+  method = tnr("random_search"),
+  learner = lrn("classif.rpart", cp = to_tune(1e-04, 1e-1, logscale = TRUE)),
+  resampling = rsmp("holdout"),
+  measure = msr("classif.ce"),
+  term_evals = 4)
+
+at$train(tsk("pima"))
+at
+```
+
+## Ensemble models
+
+Motivation: Instead of using one model for prediction, use multiple ones
+
+Ensemble types:
+
+::: {.fragment}
+- **Bagging**: averaging (regression) or majority vote (classification)
+:::
+
+::: {.fragment}
+- **Model stacking**: use predictions from one model as features for a subsequent model
+:::
+
+::: {.fragment}
+- **Multilevel stacking**: multiple levels of stacking with different models
+:::
+
+Supported via {mlr3pipelines} - [Ensemble models - mlr3book link](https://mlr3book.mlr-org.com/pipelines.html#pipe-nonlinear)
+
+## Ensemble models
+
+::: {.r-stack}
+
+::: {.fragment }
+#### Stacking example
+
+```{r echo=TRUE, cache.lazy=FALSE, eval=FALSE}
+#| output-location: column
+# only the (Graph) learner object is constructed - nothing is computed here
+graph_stack = gunion(list(
+  po("learner_cv", learner = lrn("regr.lm")),
+  po("learner_cv", learner = lrn("regr.svm")),
+  po("nop")
+)) %>>%
+  po("featureunion") %>>%
+  lrn("regr.ranger")
+
+# Trigger training of ensemble on task
+graph_stack$train(tsk("mtcars"))
+```
+
+![](assets/img/stacking.png){fig-align="center"}
+:::
+
+::: {.fragment }
+<iframe src="https://giphy.com/embed/5aLrlDiJPMPFS" width="412" height="480" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/jon-stewart-the-daily-show-5aLrlDiJPMPFS">via GIPHY</a></p>
+:::
+:::
+
+# (10) Workflow & execution
+## mlr3 - workflow & execution
+
+Users can use different approaches to structure their and streamline their workflows:
+
+<br>
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Script everything in subsequent steps
+:::
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Use {mlr3pipelines} and a `GraphLearner`
+:::
+
+::: {.fragment}
+{{< fa solid chevron-right >}} Use external workflow packages like {targets} [^1]
+:::
+
+[^1]: [https://github.com/mlr-org/mlr3-targets](https://github.com/mlr-org/mlr3-targets)
+ <!-- ^[mlr3targets] (see [) -->
+
+## What that all?
+
+::: {.fragment}
+- Data preprocessing
+:::
+::: {.fragment}
+- Error handling (fallback learners)
+:::
+::: {.fragment}
+- Database backends
+:::
+::: {.fragment}
+- Survival learning, feature selection, geospatial methods
+:::
+::: {.fragment}
+- Model interpretation (interpretable machine learning)
+- ...
+:::
+
+::: {.fragment}
+{{< fa solid arrow-right >}} mlr3book
+
+{{< fa solid arrow-right >}} mlr3gallery
+:::
+
+## Resources
+
+| Name            | Purpose        | URL                                                                        |
+| :-------------- | :------------- | :------------------------------------------------------------------------- |
+| mlr3book        | Main reference | [https://mlr3book.mlr-org.com](https://mlr3book.mlr-org.com)               |
+| mlr-org website | Website        | [https://mlr-org.com](https://mlr-org.com)                                 |
+| mlr3gallery     | Use cases      | [https://mlr-org.com/gallery](https://mlr-org.com/gallery)                 |
+| mlr3cheatsheets | Cheatsheets    | [https://cheatsheets.mlr-org.com/](https://cheatsheets.mlr-org.com/) |
+
+:::{.callout-tip appearance="simple"}
+Community support on GitHub & Stackoverflow (`#mlr3`) & Mattermost
+:::
+
+## Meta information
+
+:::: {.columns}
+
+::: {.column width="28%"}
+<!-- ::: {.colored-border} -->
+### Block 1
+
+*Time: ~ 1h 15min*
+
+1. ~~mlr3 overview~~
+2. ~~Building blocks~~
+3. Hands-on tutorial
+
+<!-- ::: -->
+:::
+
+::: {.column width="30%"}
+### Block 2
+
+*Time: ~ 45 min*
+
+1. {mlr3} spatial extensions
+2. Hands-on tutorial
+
+:::
+
+::: {.column width="30%"}
+::: {.colored-column}
+### Block 3
+
+*Time: ~ 1h*
+
+1. Use case example from Leandro Parente
+
+:::
+:::
+
+::::
+
+## And now... 5 minutes break and then 🐶️
+
+<div align="center">
+<iframe src="https://giphy.com/embed/3oKIPnAiaMCws8nOsE" width="457" height="480" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/cat-kitten-computer-3oKIPnAiaMCws8nOsE">via GIPHY</a></p>
+</div>

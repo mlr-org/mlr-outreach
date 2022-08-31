@@ -1,0 +1,175 @@
+/*-- scss:defaults --*/
+
+// fonts
+@import url(https://fonts.googleapis.com/css?family=Fira+Sans:300,300i,400,400i,500,500i,700,700i);
+@import url(https://cdn.rawgit.com/tonsky/FiraCode/1.204/distr/fira_code.css);
+@import url("https://fonts.googleapis.com/css?family=Roboto+Mono|JetBrains+Mono&display=swap");
+@import url("https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap");
+
+$font-family-sans-serif: "Roboto", "Fira Sans", "Droid Serif", serif !default;
+$font-family-monospace: "JetBrains Mono", "Fira Code", monospace;
+$presentation-font-size-root: 32px;
+$presentation-line-height: 1.5em;
+$presentation-heading-font-weight: 400;
+
+// colors
+$body-bg: #fafafa !default;
+$body-color: #000 !default;
+// $link-color: #EB811B !default;
+$selection-bg: #26351c;
+
+// headings
+// $presentation-heading-font: "Palatino Linotype", "Book Antiqua", Palatino,
+//   FreeSerif, serif !default;
+// $presentation-heading-color: #383d3d !default;
+
+/*-- scss:rules --*/
+
+.reveal a {
+        line-height: 1.5em;
+        color: #eb811b;
+}
+
+.reveal p {
+        font-weight: 300;
+}
+
+.reveal .slide ul li,
+.reveal .slide ol li {
+        font-weight: 300;
+}
+
+// maximum height of code blocks before scrolling is used
+.reveal pre.sourceCode code {
+        max-height: 700px; // default 500
+}
+
+// title slide
+.title-slide {
+        background-color: #fafafa;
+        border-top: 80px solid #fafafa;
+}
+
+h1.title {
+        color: #1a292c;
+        font-size: 45px;
+        text-shadow: none;
+        font-weight: 400;
+        text-align: left;
+        margin-left: 15px;
+        padding-top: 80px;
+}
+p.subtitle {
+        // margin-top: -10px;
+        // padding-bottom: -20px;
+        color: #1a292c;
+        text-shadow: none;
+        font-weight: 300;
+        font-size: 40px;
+        text-align: left;
+        margin-left: 15px;
+}
+p.author {
+        color: #1a292c;
+        text-shadow: none;
+        font-weight: 300;
+        font-size: 30px;
+        text-align: left;
+        margin-left: 15px;
+        margin-bottom: -10px;
+        margin-top: 0px;
+}
+
+p.date {
+        color: #1a292c;
+        text-shadow: none;
+        font-weight: 300;
+        font-size: 30px;
+        text-align: left;
+        margin-left: 15px;
+        // margin-bottom: -30px;
+}
+
+p.subtitle:after {
+        content: "";
+        display: block;
+        border: none;
+        background-color: #eb811b;
+        color: #eb811b;
+        height: 1px;
+        margin: 25px 0 25px;
+}
+
+hr,
+.mline h1::after {
+        margin: 1em 15px 0 15px;
+}
+
+h2::after.title {
+        margin: 10px 15px 35px 0;
+}
+
+.reveal .slide-number a {
+        font-size: 120%;
+        background-color: #fafafa;
+        border-radius: 12px;
+        padding: 5px;
+}
+
+// inline
+.reveal code {
+        font-size: 70%;
+        background-color: #afb8c133;
+        color: #000;
+        padding: 4px;
+        border-radius: 6px;
+}
+
+// code blocks
+.reveal div.sourceCode pre code {
+        font-size: 100%;
+}
+
+// code output
+.reveal pre code {
+        font-size: 100%;
+        padding-top: 15px;
+}
+
+.colored-column {
+        border: 2px solid red;
+        border-radius: 6px !important;
+        padding: 10px;
+        margin: 5px;
+}
+
+.column {
+        // #column;
+        // border: 2px solid red;
+        border-radius: 10px !important;
+        padding: 10px;
+        margin: 5px;
+        // background-color: #ededed;
+        background-color: #eeeeee;
+}
+
+.reveal h2 {
+        background-color: #23373b;
+        padding: 5px 0px 5px 10px;
+        color: #fafafa;
+        border-radius: 12px;
+}
+
+.small-font {
+        font-size: 70%;
+}
+
+iframe {
+        display: block;
+        margin-right: auto;
+        margin-left: auto;
+}
+
+.center {
+        text-align: center;
+}
